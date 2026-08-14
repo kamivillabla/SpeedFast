@@ -28,10 +28,18 @@ public class PedidoExpress extends Pedido {
     public void asignarRepartidor() {
         mostrarEncabezado();
 
-        if (disponibilidadInmediata) {
+        if (cumpleRequisitos()) {
             System.out.println("Repartidor mas cercano encontrado a " + distanciaKm + " km, disponible de inmediato.");
         } else {
             System.out.println("Sin repartidores disponibles de inmediato. Pedido en cola de espera.");
         }
+    }
+
+    /**
+     * Una compra express solo se asigna si hay disponibilidad inmediata.
+     */
+    @Override
+    protected boolean cumpleRequisitos() {
+        return disponibilidadInmediata;
     }
 }

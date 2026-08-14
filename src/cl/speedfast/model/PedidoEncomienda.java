@@ -30,11 +30,19 @@ public class PedidoEncomienda extends Pedido {
     public void asignarRepartidor() {
         mostrarEncabezado();
 
-        if (pesoKg <= PESO_MAXIMO_KG) {
+        if (cumpleRequisitos()) {
             System.out.println("Validando peso y embalaje: " + pesoKg + " kg en " + embalaje + "... OK");
         } else {
             System.out.println("Peso fuera de rango: " + pesoKg + " kg. Maximo permitido: " + PESO_MAXIMO_KG + " kg.");
             System.out.println("Se requiere vehiculo de carga.");
         }
+    }
+
+    /**
+     * Una encomienda solo se asigna si su peso está dentro del límite permitido.
+     */
+    @Override
+    protected boolean cumpleRequisitos() {
+        return pesoKg <= PESO_MAXIMO_KG;
     }
 }

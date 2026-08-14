@@ -45,6 +45,39 @@ public class Pedido {
     }
 
     /**
+     * Sobrecarga de {@link #asignarRepartidor()}: mismo nombre, distinta lista
+     * de parámetros.
+     *
+     * Ejecuta la validación propia del tipo de pedido y, si esta se cumple,
+     * confirma el repartidor asignado. La llamada interna se resuelve en tiempo
+     * de ejecución según el tipo real del objeto, por lo que utiliza la versión
+     * sobrescrita de la subclase correspondiente.
+     *
+     * @param nombreRepartidor nombre del repartidor que se desea asignar
+     */
+    public void asignarRepartidor(String nombreRepartidor) {
+        asignarRepartidor();
+
+        if (cumpleRequisitos()) {
+            System.out.println("Pedido asignado a " + nombreRepartidor);
+        } else {
+            System.out.println("No es posible asignar a " + nombreRepartidor + ". Pedido derivado a revision.");
+        }
+    }
+
+    /**
+     * Indica si el pedido cumple las condiciones para ser asignado.
+     *
+     * Un pedido genérico no tiene restricciones; las subclases que sí las tienen
+     * sobrescriben este método.
+     *
+     * @return true si el pedido puede asignarse a un repartidor
+     */
+    protected boolean cumpleRequisitos() {
+        return true;
+    }
+
+    /**
      * Imprime el encabezado común a todos los pedidos.
      */
     protected void mostrarEncabezado() {
