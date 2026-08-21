@@ -1,8 +1,8 @@
 # SpeedFast
 
-Sistema de asignación de repartidores para una empresa de reparto a domicilio.
+Sistema de gestión de pedidos para una empresa de reparto a domicilio.
 
-Cada tipo de servicio aplica un criterio distinto de asignación. El sistema resuelve esa diferencia mediante una jerarquía de clases con sobrescritura de métodos, sin condicionales por tipo en el código cliente.
+Cada tipo de pedido estima su tiempo de entrega con una fórmula distinta y aplica su propio criterio de asignación de repartidor.
 
 ## Requisitos
 
@@ -39,44 +39,47 @@ SpeedFast/
 
 `PedidoComida`, `PedidoEncomienda` y `PedidoExpress` heredan de `Pedido`.
 
-| Clase | Responsabilidad | Criterio de asignación |
-|---|---|---|
-| `Pedido` | Clase base. Datos comunes y flujo de asignación. | Criterio general, sin restricciones |
-| `PedidoComida` | Pedidos de restaurante. | El repartidor debe contar con mochila térmica |
-| `PedidoEncomienda` | Documentos y paquetes. | Peso dentro del límite de 20 kg |
-| `PedidoExpress` | Compras de supermercado o farmacia. | Repartidor cercano con disponibilidad inmediata |
-| `Main` | Punto de entrada. Ejecuta los escenarios de prueba. | — |
+| Clase | Responsabilidad |
+|---|---|
+| `Pedido` | Clase abstracta. Datos y comportamiento comunes a todo pedido. |
+| `PedidoComida` | Pedidos de restaurante. |
+| `PedidoEncomienda` | Documentos y paquetes. |
+| `PedidoExpress` | Compras de supermercado o farmacia. |
+| `Main` | Punto de entrada. Ejecuta los escenarios de prueba. |
 
-## Pedido
+## Pedido (clase abstracta)
 
-Estado encapsulado. Los tres atributos se reciben en el constructor y se exponen mediante *getters*; solo `direccionEntrega` admite modificación posterior.
+Los atributos se reciben en el constructor y se exponen mediante *getters*. Solo `direccionEntrega` admite modificación posterior.
 
 | Atributo | Tipo | Acceso |
 |---|---|---|
 | `idPedido` | `String` | lectura |
 | `direccionEntrega` | `String` | lectura y escritura |
+| `distanciaKm` | `double` | lectura |
 | `tipoPedido` | `String` | lectura |
 
 ### Métodos
 
 | Firma | Visibilidad | Descripción |
 |---|---|---|
-| `asignarRepartidor()` | `public` | Aplica y reporta el criterio de asignación. Sobrescrito por cada subclase. |
+| `mostrarResumen()` | `public` | Imprime el tipo, identificador, dirección y distancia del pedido. |
+| `calcularTiempoEntrega()` | `public abstract` | Tiempo estimado de entrega, en minutos. |
+| `asignarRepartidor()` | `public` | Aplica y reporta el criterio de asignación del pedido. |
 | `asignarRepartidor(String)` | `public` | Ejecuta la validación anterior y confirma el repartidor si esta se cumple. |
-| `cumpleRequisitos()` | `protected` | Condición de asignación del pedido. Devuelve `true` en la clase base. |
+| `cumpleRequisitos()` | `protected` | Condición que debe cumplir el pedido para ser asignado. |
 | `mostrarEncabezado()` | `protected` | Imprime el identificador, tipo y dirección del pedido. |
-
-`asignarRepartidor(String)` se define una sola vez en `Pedido` y opera correctamente sobre toda la jerarquía: la llamada interna a `asignarRepartidor()` se despacha según el tipo real del objeto.
 
 ## Subclases
 
-Cada subclase agrega el estado que su criterio requiere y sobrescribe `asignarRepartidor()`. `PedidoEncomienda` y `PedidoExpress` sobrescriben además `cumpleRequisitos()`; `PedidoComida` hereda el comportamiento de la clase base.
+Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarRepartidor()`.
 
-| Clase | Atributos propios |
-|---|---|
-| `PedidoComida` | `requiereMochilaTermica: boolean` |
-| `PedidoEncomienda` | `pesoKg: double`, `embalaje: String`, `PESO_MAXIMO_KG = 20.0` |
-| `PedidoExpress` | `distanciaKm: double`, `disponibilidadInmediata: boolean` |
+| Clase | Tiempo de entrega | Criterio de asignación | Atributos propios |
+|---|---|---|---|
+| `PedidoComida` | 15 min + 2 min por km | El repartidor debe contar con mochila térmica | `requiereMochilaTermica: boolean` |
+| `PedidoEncomienda` | 20 min + 1,5 min por km, ajustado a entero | Peso dentro del límite de 20 kg | `pesoKg: double`, `embalaje: String` |
+| `PedidoExpress` | 10 min, más 5 min si la distancia supera los 5 km | Repartidor cercano con disponibilidad inmediata | `disponibilidadInmediata: boolean` |
+
+`PedidoEncomienda` y `PedidoExpress` sobrescriben además `cumpleRequisitos()`.
 
 ## Ejecución
 
@@ -94,11 +97,11 @@ java -cp out/production/SpeedFast cl.speedfast.main.Main
 
 ## Escenarios de prueba
 
-`Main` ejecuta cuatro bloques:
+`Main` crea un objeto de cada tipo de pedido y ejecuta cuatro bloques:
 
-1. `asignarRepartidor()` sobre un arreglo `Pedido[]` con una instancia de cada subclase.
-2. `asignarRepartidor(String)` sobre las mismas instancias.
-3. Una instancia de `Pedido` sin especializar.
+1. `mostrarResumen()` y `calcularTiempoEntrega()` sobre cada pedido, seguidos de una tabla comparativa de tiempos estimados.
+2. `asignarRepartidor()` sobre cada pedido.
+3. `asignarRepartidor(String)` sobre las mismas instancias.
 4. Una encomienda de 35 kg y una compra express sin disponibilidad, que no superan la validación y no se asignan.
 
 ## Autora
@@ -107,4 +110,4 @@ Kamila Villablanca
 
 ## Contexto
 
-Actividad Formativa 1 — PRY2203 Desarrollo Orientado a Objetos II, Duoc UC.
+Proyecto desarrollado para la asignatura Desarrollo Orientado a Objetos II, Duoc UC.

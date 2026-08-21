@@ -9,11 +9,8 @@ import cl.speedfast.model.PedidoExpress;
  * Punto de entrada del sistema de pedidos de SpeedFast.
  *
  * Crea un objeto de cada tipo de pedido, imprime su resumen y su tiempo estimado
- * de entrega, y ejecuta la asignación de repartidor sobre toda la jerarquía,
- * incluidos los pedidos que no superan la validación.
- *
- * Los objetos se declaran con el tipo Pedido y se crean a partir de sus clases
- * derivadas, ya que Pedido es abstracta.
+ * de entrega, y ejecuta la asignación de repartidor, incluidos los pedidos que
+ * no superan la validación.
  */
 public class Main {
 
