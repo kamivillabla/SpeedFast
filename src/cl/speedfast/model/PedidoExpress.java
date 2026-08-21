@@ -4,24 +4,35 @@ package cl.speedfast.model;
  * Compra express: supermercado o farmacia.
  *
  * Criterio de asignación: repartidor más cercano con disponibilidad inmediata.
+ * Tiempo de entrega: 10 minutos base, con un recargo de 5 minutos cuando la
+ * distancia supera los 5 kilómetros.
  */
 public class PedidoExpress extends Pedido {
 
-    private double distanciaKm;
+    private static final int TIEMPO_BASE_MIN = 10;
+    private static final double DISTANCIA_LIMITE_KM = 5.0;
+    private static final int RECARGO_MIN = 5;
+
     private boolean disponibilidadInmediata;
 
     public PedidoExpress(String idPedido, String direccionEntrega, double distanciaKm, boolean disponibilidadInmediata) {
-        super(idPedido, direccionEntrega, "Pedido Express");
-        this.distanciaKm = distanciaKm;
+        super(idPedido, direccionEntrega, distanciaKm, "Pedido Express");
         this.disponibilidadInmediata = disponibilidadInmediata;
-    }
-
-    public double getDistanciaKm() {
-        return distanciaKm;
     }
 
     public boolean isDisponibilidadInmediata() {
         return disponibilidadInmediata;
+    }
+
+    /**
+     * 10 minutos base; si la distancia supera los 5 km se suman 5 minutos.
+     */
+    @Override
+    public int calcularTiempoEntrega() {
+        if (getDistanciaKm() > DISTANCIA_LIMITE_KM) {
+            return TIEMPO_BASE_MIN + RECARGO_MIN;
+        }
+        return TIEMPO_BASE_MIN;
     }
 
     @Override
@@ -29,7 +40,7 @@ public class PedidoExpress extends Pedido {
         mostrarEncabezado();
 
         if (cumpleRequisitos()) {
-            System.out.println("Repartidor mas cercano encontrado a " + distanciaKm + " km, disponible de inmediato.");
+            System.out.println("Repartidor mas cercano encontrado a " + getDistanciaKm() + " km, disponible de inmediato.");
         } else {
             System.out.println("Sin repartidores disponibles de inmediato. Pedido en cola de espera.");
         }

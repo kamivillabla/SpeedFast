@@ -4,16 +4,20 @@ package cl.speedfast.model;
  * Pedido de encomienda: documentos o paquetes.
  *
  * Criterio de asignación: se valida el peso y el embalaje antes de asignar.
+ * Tiempo de entrega: 20 minutos de gestión más 1,5 minutos por kilómetro,
+ * ajustado a un número entero de minutos.
  */
 public class PedidoEncomienda extends Pedido {
 
     private static final double PESO_MAXIMO_KG = 20.0;
+    private static final int TIEMPO_BASE_MIN = 20;
+    private static final double MINUTOS_POR_KM = 1.5;
 
     private double pesoKg;
     private String embalaje;
 
-    public PedidoEncomienda(String idPedido, String direccionEntrega, double pesoKg, String embalaje) {
-        super(idPedido, direccionEntrega, "Pedido Encomienda");
+    public PedidoEncomienda(String idPedido, String direccionEntrega, double distanciaKm, double pesoKg, String embalaje) {
+        super(idPedido, direccionEntrega, distanciaKm, "Pedido Encomienda");
         this.pesoKg = pesoKg;
         this.embalaje = embalaje;
     }
@@ -24,6 +28,14 @@ public class PedidoEncomienda extends Pedido {
 
     public String getEmbalaje() {
         return embalaje;
+    }
+
+    /**
+     * 20 minutos base más 1,5 minutos por kilómetro, redondeado a entero.
+     */
+    @Override
+    public int calcularTiempoEntrega() {
+        return (int) Math.round(TIEMPO_BASE_MIN + MINUTOS_POR_KM * getDistanciaKm());
     }
 
     @Override

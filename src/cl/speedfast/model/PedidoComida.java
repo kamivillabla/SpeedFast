@@ -4,18 +4,30 @@ package cl.speedfast.model;
  * Pedido de comida desde un restaurante.
  *
  * Criterio de asignación: el repartidor debe contar con mochila térmica.
+ * Tiempo de entrega: 15 minutos de preparación más 2 minutos por kilómetro.
  */
 public class PedidoComida extends Pedido {
 
+    private static final int TIEMPO_BASE_MIN = 15;
+    private static final double MINUTOS_POR_KM = 2.0;
+
     private boolean requiereMochilaTermica;
 
-    public PedidoComida(String idPedido, String direccionEntrega, boolean requiereMochilaTermica) {
-        super(idPedido, direccionEntrega, "Pedido Comida");
+    public PedidoComida(String idPedido, String direccionEntrega, double distanciaKm, boolean requiereMochilaTermica) {
+        super(idPedido, direccionEntrega, distanciaKm, "Pedido Comida");
         this.requiereMochilaTermica = requiereMochilaTermica;
     }
 
     public boolean isRequiereMochilaTermica() {
         return requiereMochilaTermica;
+    }
+
+    /**
+     * 15 minutos base más 2 minutos por cada kilómetro de distancia.
+     */
+    @Override
+    public int calcularTiempoEntrega() {
+        return (int) Math.round(TIEMPO_BASE_MIN + MINUTOS_POR_KM * getDistanciaKm());
     }
 
     @Override
