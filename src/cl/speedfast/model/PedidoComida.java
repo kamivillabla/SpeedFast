@@ -8,6 +8,7 @@ package cl.speedfast.model;
  */
 public class PedidoComida extends Pedido {
 
+    private static final String REPARTIDOR_AUTOMATICO = "Makoto Kino";
     private static final int TIEMPO_BASE_MIN = 15;
     private static final double MINUTOS_POR_KM = 2.0;
 
@@ -39,5 +40,7 @@ public class PedidoComida extends Pedido {
         } else {
             System.out.println("El pedido no requiere mochila termica. Repartidor sin restriccion.");
         }
+
+        confirmarAsignacion(REPARTIDOR_AUTOMATICO);
     }
 }

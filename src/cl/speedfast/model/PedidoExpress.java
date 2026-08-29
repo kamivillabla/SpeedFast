@@ -9,6 +9,7 @@ package cl.speedfast.model;
  */
 public class PedidoExpress extends Pedido {
 
+    private static final String REPARTIDOR_AUTOMATICO = "Hotaru Tomoe";
     private static final int TIEMPO_BASE_MIN = 10;
     private static final double DISTANCIA_LIMITE_KM = 5.0;
     private static final int RECARGO_MIN = 5;
@@ -44,6 +45,8 @@ public class PedidoExpress extends Pedido {
         } else {
             System.out.println("Sin repartidores disponibles de inmediato. Pedido en cola de espera.");
         }
+
+        confirmarAsignacion(REPARTIDOR_AUTOMATICO);
     }
 
     /**

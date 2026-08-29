@@ -9,6 +9,7 @@ package cl.speedfast.model;
  */
 public class PedidoEncomienda extends Pedido {
 
+    private static final String REPARTIDOR_AUTOMATICO = "Setsuna Meiou";
     private static final double PESO_MAXIMO_KG = 20.0;
     private static final int TIEMPO_BASE_MIN = 20;
     private static final double MINUTOS_POR_KM = 1.5;
@@ -48,6 +49,8 @@ public class PedidoEncomienda extends Pedido {
             System.out.println("Peso fuera de rango: " + pesoKg + " kg. Maximo permitido: " + PESO_MAXIMO_KG + " kg.");
             System.out.println("Se requiere vehiculo de carga.");
         }
+
+        confirmarAsignacion(REPARTIDOR_AUTOMATICO);
     }
 
     /**
