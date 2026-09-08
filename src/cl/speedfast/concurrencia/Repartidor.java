@@ -1,24 +1,20 @@
 package cl.speedfast.concurrencia;
 
-import cl.speedfast.gestores.ControladorDeEnvios;
 import cl.speedfast.model.EstadoPedido;
 import cl.speedfast.model.Pedido;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Repartidor que recorre su propia ruta de entregas.
+ * Repartidor que retira pedidos de la zona de carga y los entrega.
  *
- * Implementa {@link Runnable}, de modo que varios repartidores pueden recorrer
- * sus rutas al mismo tiempo. Al ejecutarse despacha uno a uno los pedidos que
- * tiene asignados a través de {@link ControladorDeEnvios} y simula cada trayecto
- * con una pausa de duración aleatoria, informando su avance en consola.
+ * Implementa {@link Runnable}, de modo que varios repartidores pueden trabajar
+ * al mismo tiempo sobre la misma {@link ZonaDeCarga}. Cada uno retira un pedido,
+ * lo marca en reparto, simula el trayecto con una pausa de duración aleatoria y
+ * lo da por entregado, repitiendo el ciclo hasta que la zona queda vacía.
  *
- * Un repartidor solo opera sobre los pedidos de su propia ruta, de modo que dos
- * repartidores nunca modifican el mismo pedido.
+ * Un pedido retirado ya no está en la zona, por lo que desde ese momento un solo
+ * repartidor trabaja sobre él.
  */
 public class Repartidor implements Runnable {
 
@@ -26,18 +22,18 @@ public class Repartidor implements Runnable {
     private static final int TRAYECTO_MAXIMO_MS = 1500;
 
     private final String nombre;
-    private final List<Pedido> pedidosAsignados = new ArrayList<>();
-    private final ControladorDeEnvios controlador;
+    private final ZonaDeCarga zonaDeCarga;
+    private int entregasRealizadas;
 
     /**
-     * Crea un repartidor sin pedidos en su ruta.
+     * Crea un repartidor que trabaja contra la zona de carga indicada.
      *
      * @param nombre      nombre con el que el repartidor se identifica en consola
-     * @param controlador controlador a través del cual despacha sus entregas
+     * @param zonaDeCarga zona de carga compartida desde la que retira sus pedidos
      */
-    public Repartidor(String nombre, ControladorDeEnvios controlador) {
+    public Repartidor(String nombre, ZonaDeCarga zonaDeCarga) {
         this.nombre = nombre;
-        this.controlador = controlador;
+        this.zonaDeCarga = zonaDeCarga;
     }
 
     public String getNombre() {
@@ -45,80 +41,56 @@ public class Repartidor implements Runnable {
     }
 
     /**
-     * Entrega la ruta del repartidor sin permitir modificarla desde fuera.
+     * Indica cuántos pedidos alcanzó a entregar el repartidor.
      *
-     * @return pedidos que el repartidor tiene asignados
+     * @return cantidad de entregas completadas
      */
-    public List<Pedido> getPedidosAsignados() {
-        return Collections.unmodifiableList(pedidosAsignados);
+    public int getEntregasRealizadas() {
+        return entregasRealizadas;
     }
 
     /**
-     * Incorpora un pedido a la ruta del repartidor y lo deja asignado a su nombre.
+     * Retira y entrega pedidos hasta que la zona de carga queda vacía.
      *
-     * @param pedido pedido que pasa a formar parte de la ruta
-     */
-    public void asignar(Pedido pedido) {
-        pedidosAsignados.add(pedido);
-        pedido.asignarRepartidor(nombre);
-    }
-
-    /**
-     * Imprime la ruta del repartidor y el tiempo estimado de cada entrega.
-     */
-    public void mostrarRuta() {
-        System.out.println("Ruta de " + nombre + " (" + pedidosAsignados.size() + " pedidos)");
-
-        for (Pedido pedido : pedidosAsignados) {
-            System.out.println("  - " + describir(pedido)
-                    + " hacia " + pedido.getDireccionEntrega()
-                    + " (" + pedido.calcularTiempoEntrega() + " min estimados)");
-        }
-    }
-
-    /**
-     * Recorre la ruta entregando los pedidos uno tras otro.
-     *
-     * Los pedidos que ya no están en condiciones de salir a reparto se omiten.
      * Si el repartidor es interrumpido durante un trayecto, conserva la marca de
-     * interrupción y regresa a la base sin continuar con el resto de la ruta.
+     * interrupción y termina su turno sin tomar más pedidos.
      */
     @Override
     public void run() {
-        informar("Inicia su jornada con " + pedidosAsignados.size() + " pedidos asignados.");
 
-        int entregados = 0;
+        Pedido pedido = zonaDeCarga.retirarPedido();
 
-        for (Pedido pedido : pedidosAsignados) {
+        while (pedido != null) {
 
-            if (pedido.getEstado() != EstadoPedido.ASIGNADO) {
-                informar("Omite " + describir(pedido) + ": el pedido esta " + pedido.getEstado() + ".");
-                continue;
-            }
+            informar("Retirando pedido #" + pedido.getIdPedido() + "...");
 
-            informar("Entregando " + describir(pedido) + " en " + pedido.getDireccionEntrega() + "...");
-            controlador.despachar(pedido);
+            pedido.setRepartidor(nombre);
+            pedido.setEstado(EstadoPedido.EN_REPARTO);
+            informar("Estado: " + pedido.getEstado());
+
+            informar("Entregando pedido #" + pedido.getIdPedido()
+                    + " en " + pedido.getDireccionEntrega() + "...");
 
             try {
                 Thread.sleep(ThreadLocalRandom.current().nextInt(TRAYECTO_MINIMO_MS, TRAYECTO_MAXIMO_MS + 1));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                informar("Trayecto interrumpido en " + describir(pedido) + ". Regresa a la base.");
+                informar("Trayecto interrumpido con el pedido #" + pedido.getIdPedido() + ". Termina su turno.");
                 return;
             }
 
-            entregados++;
-            informar("Pedido #" + pedido.getIdPedido() + " entregado.");
+            pedido.setEstado(EstadoPedido.ENTREGADO);
+            entregasRealizadas++;
+            informar("Estado: " + pedido.getEstado());
+
+            pedido = zonaDeCarga.retirarPedido();
         }
 
-        informar("Termina su jornada. Entregas realizadas: " + entregados + ".");
+        informar("La zona de carga esta vacia. Termina su turno con "
+                + entregasRealizadas + " entregas.");
     }
 
     private void informar(String mensaje) {
-        System.out.println("[Repartidor: " + nombre + "] " + mensaje);
-    }
-
-    private String describir(Pedido pedido) {
-        return pedido.getTipoPedido() + " #" + pedido.getIdPedido();
+        System.out.println("[Repartidor - " + nombre + "] " + mensaje);
     }
 }
