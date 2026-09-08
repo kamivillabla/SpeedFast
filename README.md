@@ -4,7 +4,7 @@ Sistema de gestión de pedidos para una empresa de reparto a domicilio.
 
 Cada tipo de pedido estima su tiempo de entrega con una fórmula distinta y aplica su propio criterio de asignación de repartidor. Un controlador de envíos despacha, cancela y consulta el historial trabajando únicamente contra los contratos que los pedidos implementan.
 
-La jornada de reparto se ejecuta de forma concurrente: cada repartidor recorre su propia ruta al mismo tiempo que los demás.
+La jornada de reparto se ejecuta de forma concurrente: los pedidos llegan a una zona de carga común y los repartidores los retiran al mismo tiempo, coordinados para que cada pedido lo entregue un único repartidor.
 
 ## Requisitos
 
@@ -34,6 +34,7 @@ SpeedFast/
 │           │   ├── ControladorDeEnvios.java
 │           │   └── package-info.java
 │           ├── concurrencia/
+│           │   ├── ZonaDeCarga.java
 │           │   ├── Repartidor.java
 │           │   └── package-info.java
 │           └── main/
@@ -49,7 +50,7 @@ SpeedFast/
 | `cl.speedfast.interfaces` | Contratos de comportamiento |
 | `cl.speedfast.model` | Modelo de dominio: la jerarquía de pedidos |
 | `cl.speedfast.gestores` | Coordinación de las operaciones sobre los envíos |
-| `cl.speedfast.concurrencia` | Ejecución concurrente de las entregas |
+| `cl.speedfast.concurrencia` | Recurso compartido y ejecución concurrente de las entregas |
 | `cl.speedfast.main` | Punto de entrada de la aplicación |
 
 ## Modelo de clases
@@ -64,7 +65,8 @@ SpeedFast/
 | `PedidoExpress` | Compras de supermercado o farmacia. |
 | `EstadoPedido` | Estados del pedido dentro del proceso de entrega. |
 | `ControladorDeEnvios` | Registra los envíos y coordina despacho, cancelación e historial. |
-| `Repartidor` | Tarea concurrente. Recorre su ruta y entrega los pedidos que tiene asignados. |
+| `ZonaDeCarga` | Recurso compartido. Almacena los pedidos en espera y controla su retiro. |
+| `Repartidor` | Tarea concurrente. Retira pedidos de la zona de carga y los entrega. |
 | `Main` | Punto de entrada. Ejecuta la simulación de la jornada. |
 
 
@@ -110,6 +112,9 @@ classDiagram
             +cancelar() void
             +cancelar(String motivo) void
             +verHistorial() void
+            +setEstado(EstadoPedido estado) void
+            +setRepartidor(String repartidor) void
+            +toString() String
             #confirmarAsignacion(String nombreRepartidor) void
             #cumpleRequisitos() boolean
             #mostrarEncabezado() void
@@ -138,6 +143,8 @@ classDiagram
             PENDIENTE
             ASIGNADO
             DESPACHADO
+            EN_REPARTO
+            ENTREGADO
             CANCELADO
         }
     }
@@ -157,15 +164,19 @@ classDiagram
             <<interface>>
             +run() void
         }
+        class ZonaDeCarga {
+            -List~Pedido~ pedidosEnEspera
+            +agregarPedido(Pedido pedido) void
+            +retirarPedido() Pedido
+            +pedidosEnEspera() int
+        }
         class Repartidor {
             -String nombre
-            -List~Pedido~ pedidosAsignados
-            -ControladorDeEnvios controlador
-            +asignar(Pedido pedido) void
-            +mostrarRuta() void
+            -ZonaDeCarga zonaDeCarga
+            -int entregasRealizadas
+            +getEntregasRealizadas() int
             +run() void
             -informar(String mensaje) void
-            -describir(Pedido pedido) String
         }
     }
 
@@ -185,8 +196,8 @@ classDiagram
     ControladorDeEnvios ..> Cancelable : usa
 
     Runnable <|.. Repartidor
-    Repartidor "1" o-- "0..*" Pedido : pedidosAsignados
-    Repartidor "1" --> "1" ControladorDeEnvios : despacha a traves de
+    ZonaDeCarga "1" o-- "0..*" Pedido : pedidosEnEspera
+    Repartidor "3" --> "1" ZonaDeCarga : retira de
 
     classDef contrato fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
     classDef modelo fill:#fff3e0,stroke:#e65100,color:#5d2f00
@@ -196,7 +207,7 @@ classDiagram
     cssClass "Despachable,Cancelable,Rastreable" contrato
     cssClass "Pedido,PedidoComida,PedidoEncomienda,PedidoExpress,EstadoPedido" modelo
     cssClass "ControladorDeEnvios" gestor
-    cssClass "Runnable,Repartidor" concurrente
+    cssClass "Runnable,ZonaDeCarga,Repartidor" concurrente
 ```
 
 ## Contratos
@@ -220,11 +231,15 @@ Cada pedido rastrea sus propios eventos; el controlador rastrea las entregas rea
 | `PENDIENTE` | El pedido existe pero aún no tiene repartidor. |
 | `ASIGNADO` | El pedido tiene un repartidor confirmado y puede despacharse. |
 | `DESPACHADO` | El pedido salió a reparto y ya no admite cancelación. |
+| `EN_REPARTO` | El pedido fue retirado de la zona de carga y va en camino a su destino. |
+| `ENTREGADO` | El pedido llegó a su destino. |
 | `CANCELADO` | El pedido fue anulado antes de salir a reparto. |
+
+El recorrido habitual va de `PENDIENTE` a `ENTREGADO`. `CANCELADO` es la única salida anticipada y solo se admite mientras el pedido no haya salido a reparto.
 
 ## Pedido (clase abstracta)
 
-Los atributos se reciben en el constructor y se exponen mediante *getters*. Solo `direccionEntrega` admite modificación posterior.
+Los atributos se reciben en el constructor y se exponen mediante *getters*. `direccionEntrega`, `repartidor` y `estado` admiten modificación posterior: los dos últimos cambian mientras el pedido avanza por la zona de carga.
 
 | Atributo | Tipo | Acceso |
 |---|---|---|
@@ -232,8 +247,8 @@ Los atributos se reciben en el constructor y se exponen mediante *getters*. Solo
 | `direccionEntrega` | `String` | lectura y escritura |
 | `distanciaKm` | `double` | lectura |
 | `tipoPedido` | `String` | lectura |
-| `repartidor` | `String` | lectura |
-| `estado` | `EstadoPedido` | lectura |
+| `repartidor` | `String` | lectura y escritura |
+| `estado` | `EstadoPedido` | lectura y escritura |
 | `historial` | `List<String>` | consulta mediante `verHistorial()` |
 
 ### Métodos
@@ -248,6 +263,9 @@ Los atributos se reciben en el constructor y se exponen mediante *getters*. Solo
 | `cancelar()` | `public` | Cancela el pedido sin dejar constancia de un motivo. |
 | `cancelar(String)` | `public` | Cancela el pedido dejando constancia del motivo. |
 | `verHistorial()` | `public` | Imprime los eventos registrados por el pedido, en orden de ocurrencia. |
+| `setEstado(EstadoPedido)` | `public` | Actualiza el estado del pedido. |
+| `setRepartidor(String)` | `public` | Registra al repartidor que se hace cargo del pedido. |
+| `toString()` | `public` | Describe el pedido en una línea: tipo, identificador, destino y estado. |
 | `confirmarAsignacion(String)` | `protected` | Punto único de confirmación que comparten ambas sobrecargas. |
 | `cumpleRequisitos()` | `protected` | Condición que debe cumplir el pedido para ser asignado. |
 | `mostrarEncabezado()` | `protected` | Imprime el identificador, tipo y dirección del pedido. |
@@ -273,42 +291,55 @@ Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarReparti
 | `registrar(Pedido)` | Incorpora un pedido a la gestión del controlador. |
 | `despachar(Despachable)` | Envía a reparto el envío indicado. |
 | `cancelar(Cancelable)` | Anula el envío indicado. |
-| `verHistorial()` | Imprime las entregas realizadas y el repartidor que se hizo cargo de cada una. |
+| `verHistorial()` | Imprime los pedidos ya entregados y el repartidor que se hizo cargo de cada uno. |
+
+## ZonaDeCarga
+
+Los pedidos que esperan repartidor se acumulan en la zona de carga. Es la única estructura que los repartidores comparten y, por lo tanto, el punto donde se concentra la sincronización.
+
+| Firma | Descripción |
+|---|---|
+| `agregarPedido(Pedido)` | Deposita un pedido a la espera de un repartidor. |
+| `retirarPedido()` | Entrega el siguiente pedido en espera. Devuelve `null` cuando la zona queda vacía. |
+| `pedidosEnEspera()` | Cantidad de pedidos que aún no tienen repartidor. |
+
+Los tres métodos son `synchronized`: mientras un repartidor retira, ningún otro puede consultar ni modificar los pedidos en espera.
 
 ## Repartidor
 
-Un repartidor es una tarea concurrente: implementa `Runnable` y su método `run()` recorre la ruta que tiene asignada.
+Un repartidor es una tarea concurrente: implementa `Runnable` y su método `run()` retira pedidos de la zona de carga hasta agotarla.
 
 | Atributo | Tipo | Descripción |
 |---|---|---|
 | `nombre` | `String` | Nombre con el que el repartidor se identifica en consola. |
-| `pedidosAsignados` | `List<Pedido>` | Ruta del repartidor. |
-| `controlador` | `ControladorDeEnvios` | Controlador a través del cual despacha sus entregas. |
+| `zonaDeCarga` | `ZonaDeCarga` | Zona compartida desde la que retira sus pedidos. |
+| `entregasRealizadas` | `int` | Entregas completadas durante el turno. |
 
 | Firma | Descripción |
 |---|---|
-| `asignar(Pedido)` | Incorpora un pedido a la ruta y lo deja asignado a nombre del repartidor. |
-| `mostrarRuta()` | Imprime la ruta y el tiempo estimado de cada entrega. |
-| `run()` | Recorre la ruta entregando los pedidos uno tras otro. |
+| `run()` | Retira y entrega pedidos hasta que la zona de carga queda vacía. |
+| `getEntregasRealizadas()` | Entregas completadas por el repartidor. |
 
-Por cada pedido de su ruta, `run()` informa la salida, lo despacha a través del controlador, simula el trayecto con `Thread.sleep()` de duración aleatoria entre 500 y 1500 ms, e informa la entrega. Los pedidos que ya no están en estado `ASIGNADO` —por ejemplo, uno cancelado antes de la salida— se omiten con un mensaje.
+Por cada pedido retirado, `run()` lo marca `EN_REPARTO`, simula el trayecto con `Thread.sleep()` de duración aleatoria entre 500 y 1500 ms y lo deja `ENTREGADO`, informando cada paso en consola.
 
 ## Concurrencia
 
-Las entregas se ejecutan en paralelo. `Main` envía los tres repartidores a un `ExecutorService` con un *pool* fijo de tres hilos y mantiene la simulación abierta hasta que todos terminan su ruta. Si la espera supera el plazo previsto, se ordena el regreso a la base.
+Los pedidos llegan a una zona de carga común y tres repartidores los retiran en paralelo. `Main` los ejecuta mediante un `ExecutorService` con un *pool* fijo de tres hilos y mantiene la simulación abierta hasta que todos terminan su turno.
 
 | Aspecto | Resolución |
 |---|---|
 | Ejecución | `ExecutorService` con *pool* fijo de tres hilos |
+| Recurso compartido | Una única instancia de `ZonaDeCarga` |
+| Sección crítica | Comprobar si quedan pedidos y retirar uno |
+| Mecanismo | Métodos `synchronized` sobre la zona de carga |
 | Término | Espera acotada a un minuto; vencido el plazo, las tareas se detienen |
-| Estado compartido | Ninguno durante la ejecución concurrente |
-| Interrupción | Se restaura la marca del hilo y se abandona la ruta |
+| Interrupción | Se restaura la marca del hilo y el repartidor termina su turno |
 
-El orden en que los repartidores escriben en consola cambia entre ejecuciones, porque la planificación de los hilos depende de la máquina virtual y del sistema operativo. El resultado no cambia: las mismas seis entregas realizadas y el pedido cancelado omitido.
+El reparto del trabajo entre los repartidores cambia entre ejecuciones, porque la planificación de los hilos depende de la máquina virtual y del sistema operativo. Lo que no cambia es el resultado: cada pedido se entrega una sola vez y la zona de carga queda vacía.
 
 ## Diseño
 
-El sistema se organiza en torno a cuatro piezas: una clase abstracta que reúne lo común a todo pedido, tres contratos de comportamiento, un gestor que opera sobre esos contratos y un repartidor que ejecuta las entregas de forma concurrente.
+El sistema se organiza en torno a cinco piezas: una clase abstracta que reúne lo común a todo pedido, tres contratos de comportamiento, un gestor que opera sobre esos contratos, una zona de carga que custodia los pedidos en espera y un repartidor que ejecuta las entregas de forma concurrente.
 
 ### Reutilización
 
@@ -322,17 +353,19 @@ Para incorporar un cuarto tipo de pedido basta con heredar de `Pedido` e impleme
 
 Las capacidades también pueden crecer por separado. Cada interfaz declara un solo método, de manera que una clase que en el futuro solo necesite cancelarse implementa `Cancelable` sin asumir las demás responsabilidades.
 
-### Aislamiento entre hilos
+### Acceso al recurso compartido
 
-Todo el estado compartido se construye antes de iniciar la ejecución concurrente: los pedidos se registran en el controlador y las rutas quedan armadas mientras corre un solo hilo. Durante la simulación cada repartidor opera únicamente sobre los pedidos de su propia ruta, de modo que dos hilos nunca escriben sobre el mismo objeto.
+Los tres repartidores trabajan sobre la misma zona de carga, de modo que retirar un pedido es una operación que varios hilos pueden intentar a la vez. La sección crítica no es solo la extracción: comprobar si quedan pedidos y retirar uno deben ocurrir como una única operación indivisible. Si la comprobación quedara fuera de la protección, dos repartidores podrían verificar que hay pedidos disponibles antes de que alguno retire.
 
-El diseño evita las condiciones de carrera en lugar de resolverlas con bloqueos: sin estructuras mutables compartidas no hay secciones críticas que proteger.
+Por eso `retirarPedido()` es `synchronized` completo y no un bloque parcial. Una vez retirado, el pedido ya no está en la zona: desde ese momento un solo repartidor trabaja sobre él, y marcarlo `EN_REPARTO` y `ENTREGADO` no requiere protección adicional.
 
-`Thread.sleep()` puede lanzar `InterruptedException` mientras un repartidor simula un trayecto. En ese caso se restaura la marca de interrupción del hilo, se informa la situación y se abandona la ruta, en lugar de descartar la excepción en silencio. `Main` aplica el mismo criterio cuando el hilo principal es interrumpido durante la espera.
+Un solo mecanismo basta para el problema. No se combinan bloqueos explícitos, semáforos ni contadores atómicos, que aquí solo agregarían complejidad sin resolver nada que el monitor de la zona no cubra.
+
+`Thread.sleep()` puede lanzar `InterruptedException` mientras un repartidor simula un trayecto. En ese caso se restaura la marca de interrupción del hilo, se informa la situación y el repartidor termina su turno sin tomar más pedidos. `Main` aplica el mismo criterio cuando el hilo principal es interrumpido durante la espera.
 
 ### Mantenibilidad
 
-Las responsabilidades están repartidas entre los paquetes: las reglas de negocio en el modelo, la coordinación de los envíos en el gestor, la ejecución concurrente de las entregas en `Repartidor` y el armado de la simulación en `Main`.
+Las responsabilidades están repartidas entre los paquetes: las reglas de negocio en el modelo, la coordinación de los envíos en el gestor, la custodia del recurso compartido en `ZonaDeCarga`, la ejecución de las entregas en `Repartidor` y el armado de la simulación en `Main`.
 
 El estado del pedido se modela con el enum `EstadoPedido` y no con banderas booleanas separadas. De esta forma un pedido no puede quedar cancelado y despachado a la vez, y las transiciones válidas quedan concentradas en `despachar()` y `cancelar()`. Un cambio en la manera de cancelar tampoco obliga a modificar las clases que solo necesitan consultar el historial.
 
@@ -352,21 +385,25 @@ java -cp out/production/SpeedFast cl.speedfast.main.Main
 
 ## Escenarios de prueba
 
-`Main` simula una jornada completa de reparto con siete pedidos y tres repartidores, en cinco bloques:
+`Main` simula una jornada de reparto con siete pedidos, una zona de carga y tres repartidores, en tres bloques:
 
-1. **Pedidos de la jornada.** Los siete pedidos se registran en el controlador y cada uno muestra su ficha con `mostrarResumen()`.
-2. **Asignación de repartidores.** Cada repartidor recibe su ruta mediante `asignar(Pedido)`, que aplica el criterio del tipo de pedido y lo deja a su nombre. Se imprime la ruta resultante de cada uno.
-3. **Cambios antes de salir a reparto.** Un pedido se cancela a traves del controlador, que lo recibe como `Cancelable`. La ruta de Makoto Kino queda con un pedido que ya no debe entregarse.
-4. **Salida a reparto.** Los tres repartidores se ejecutan concurrentemente mediante `ExecutorService`. Cada uno recorre su ruta, despacha sus pedidos, simula el trayecto y omite el pedido cancelado.
-5. **Cierre de la jornada.** El controlador imprime las entregas realizadas y cada pedido muestra su historial de eventos.
+1. **Zona de carga inicializada.** Los siete pedidos se registran en el controlador y se depositan en la zona de carga, que informa cada ingreso y la cantidad en espera.
+2. **Retiro y entrega concurrente.** Los tres repartidores se ejecutan mediante `ExecutorService` sobre la misma zona. Cada uno retira un pedido, lo marca `EN_REPARTO`, simula el trayecto y lo deja `ENTREGADO`, repitiendo el ciclo hasta agotar la zona.
+3. **Cierre de la jornada.** Se informa el reparto del trabajo entre los repartidores y el historial de entregas del controlador.
 
-| Repartidor | Ruta | Entregas |
-|---|---|---|
-| Usagi Tsukino | `PED-001`, `PED-002` | 2 |
-| Makoto Kino | `PED-003`, `PED-004`, `PED-007` | 2, el tercero fue cancelado |
-| Minako Aino | `PED-005`, `PED-006` | 2 |
+El reparto entre los tres repartidores varía en cada ejecución. Lo que se mantiene es que los siete pedidos se entregan y ninguno se procesa dos veces.
 
-Al finalizar, el historial registra seis entregas y el pedido `PED-007` queda como cancelado.
+### Comprobación de consistencia
+
+El mensaje final no se imprime de forma incondicional. Antes de darlo por bueno, `Main` verifica tres condiciones:
+
+| Condición | Comprobación |
+|---|---|
+| La zona quedó vacía | `pedidosEnEspera()` devuelve cero |
+| Todos los pedidos llegaron | Los siete están en estado `ENTREGADO` |
+| No hubo entregas duplicadas | La suma de entregas informadas por los repartidores es siete |
+
+Si alguna falla, el programa informa la inconsistencia y detalla qué pedidos quedaron sin entregar, en lugar de anunciar un éxito que no ocurrió.
 
 ## Autora
 
