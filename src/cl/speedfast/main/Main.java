@@ -94,6 +94,14 @@ public class Main {
         System.out.println("Pedidos en espera: " + zonaDeCarga.pedidosEnEspera());
         System.out.println();
 
+        System.out.println("Estado final de los pedidos");
+
+        for (Pedido pedido : pedidos) {
+            System.out.println("- " + pedido);
+        }
+
+        System.out.println();
+
         controlador.verHistorial();
         System.out.println();
 

@@ -389,7 +389,7 @@ java -cp out/production/SpeedFast cl.speedfast.main.Main
 
 1. **Zona de carga inicializada.** Los siete pedidos se registran en el controlador y se depositan en la zona de carga, que informa cada ingreso y la cantidad en espera.
 2. **Retiro y entrega concurrente.** Los tres repartidores se ejecutan mediante `ExecutorService` sobre la misma zona. Cada uno retira un pedido, lo marca `EN_REPARTO`, simula el trayecto y lo deja `ENTREGADO`, repitiendo el ciclo hasta agotar la zona.
-3. **Cierre de la jornada.** Se informa el reparto del trabajo entre los repartidores y el historial de entregas del controlador.
+3. **Cierre de la jornada.** Se informa el estado final de cada pedido, el historial de entregas del controlador y el reparto del trabajo entre los repartidores.
 
 El reparto entre los tres repartidores varía en cada ejecución. Lo que se mantiene es que los siete pedidos se entregan y ninguno se procesa dos veces.
 
