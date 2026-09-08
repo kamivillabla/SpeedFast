@@ -48,7 +48,7 @@ public class ControladorDeEnvios implements Rastreable {
     }
 
     /**
-     * Imprime las entregas realizadas y el repartidor que se hizo cargo de cada una.
+     * Imprime los pedidos ya entregados y el repartidor que se hizo cargo de cada uno.
      */
     @Override
     public void verHistorial() {
@@ -57,7 +57,7 @@ public class ControladorDeEnvios implements Rastreable {
         int entregas = 0;
 
         for (Pedido envio : envios) {
-            if (envio.getEstado() == EstadoPedido.DESPACHADO) {
+            if (envio.getEstado() == EstadoPedido.ENTREGADO) {
                 System.out.println("- " + envio.getTipoPedido() + " #" + envio.getIdPedido()
                         + " - entregado por " + envio.getRepartidor());
                 entregas++;
