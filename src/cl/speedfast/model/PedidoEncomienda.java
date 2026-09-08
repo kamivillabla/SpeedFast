@@ -34,6 +34,15 @@ public class PedidoEncomienda extends Pedido {
     /**
      * 20 minutos base más 1,5 minutos por kilómetro, redondeado a entero.
      */
+    /**
+     * Agrega a la ficha el peso y el embalaje de la encomienda.
+     */
+    @Override
+    public void mostrarResumen() {
+        super.mostrarResumen();
+        System.out.printf("Contenido: %.1f kg en %s%n", getPesoKg(), getEmbalaje());
+    }
+
     @Override
     public int calcularTiempoEntrega() {
         return (int) Math.round(TIEMPO_BASE_MIN + MINUTOS_POR_KM * getDistanciaKm());

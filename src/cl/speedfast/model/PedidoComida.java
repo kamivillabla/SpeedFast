@@ -26,6 +26,15 @@ public class PedidoComida extends Pedido {
     /**
      * 15 minutos base más 2 minutos por cada kilómetro de distancia.
      */
+    /**
+     * Agrega a la ficha si el pedido exige mochila térmica.
+     */
+    @Override
+    public void mostrarResumen() {
+        super.mostrarResumen();
+        System.out.println("Mochila termica: " + (isRequiereMochilaTermica() ? "requerida" : "no requerida"));
+    }
+
     @Override
     public int calcularTiempoEntrega() {
         return (int) Math.round(TIEMPO_BASE_MIN + MINUTOS_POR_KM * getDistanciaKm());

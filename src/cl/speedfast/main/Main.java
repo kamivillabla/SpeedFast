@@ -34,7 +34,7 @@ public class Main {
         System.out.println("SpeedFast - Coordinacion de entregas desde la zona de carga");
         System.out.println();
 
-        System.out.println("1. Zona de carga inicializada");
+        System.out.println("1. Pedidos de la jornada");
         System.out.println();
 
         ZonaDeCarga zonaDeCarga = new ZonaDeCarga();
@@ -48,6 +48,11 @@ public class Main {
                 new PedidoExpress("PED-005", "Pasaje El Roble 780, Nunoa", 7.0, true),
                 new PedidoEncomienda("PED-006", "Camino Melipilla 900, Cerrillos", 9.0, 12.0, "caja reforzada"),
                 new PedidoComida("PED-007", "Vicuna Mackenna 3400, San Joaquin", 5.5, true));
+
+        for (Pedido pedido : pedidos) {
+            pedido.mostrarResumen();
+            System.out.println();
+        }
 
         for (Pedido pedido : pedidos) {
             controlador.registrar(pedido);

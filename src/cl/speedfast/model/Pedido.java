@@ -62,10 +62,6 @@ public abstract class Pedido implements Despachable, Cancelable, Rastreable {
         return estado;
     }
 
-    public void setDireccionEntrega(String direccionEntrega) {
-        this.direccionEntrega = direccionEntrega;
-    }
-
     /**
      * Actualiza el estado del pedido.
      *

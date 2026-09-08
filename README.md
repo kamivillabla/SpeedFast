@@ -239,12 +239,12 @@ El recorrido habitual va de `PENDIENTE` a `ENTREGADO`. `CANCELADO` es la única 
 
 ## Pedido (clase abstracta)
 
-Los atributos se reciben en el constructor y se exponen mediante *getters*. `direccionEntrega`, `repartidor` y `estado` admiten modificación posterior: los dos últimos cambian mientras el pedido avanza por la zona de carga.
+Los atributos se reciben en el constructor y se exponen mediante *getters*. Solo `repartidor` y `estado` admiten modificación posterior: ambos cambian mientras el pedido avanza por la zona de carga.
 
 | Atributo | Tipo | Acceso |
 |---|---|---|
 | `idPedido` | `String` | lectura |
-| `direccionEntrega` | `String` | lectura y escritura |
+| `direccionEntrega` | `String` | lectura |
 | `distanciaKm` | `double` | lectura |
 | `tipoPedido` | `String` | lectura |
 | `repartidor` | `String` | lectura y escritura |
@@ -274,7 +274,7 @@ Cada asignación, despacho y cancelación queda anotada en el historial del pedi
 
 ## Subclases
 
-Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarRepartidor()`.
+Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarRepartidor()` y `mostrarResumen()`, esta última para agregar a la ficha su dato propio.
 
 | Clase | Tiempo de entrega | Criterio de asignación | Repartidor automático | Atributos propios |
 |---|---|---|---|---|
@@ -283,6 +283,12 @@ Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarReparti
 | `PedidoExpress` | 10 min, más 5 min si la distancia supera los 5 km | Repartidor cercano con disponibilidad inmediata | Hotaru Tomoe | `disponibilidadInmediata: boolean` |
 
 `PedidoEncomienda` y `PedidoExpress` sobrescriben además `cumpleRequisitos()`.
+
+| Clase | Línea que agrega a la ficha |
+|---|---|
+| `PedidoComida` | Si el pedido requiere mochila térmica |
+| `PedidoEncomienda` | El peso y el embalaje |
+| `PedidoExpress` | Si hay disponibilidad inmediata |
 
 ## ControladorDeEnvios
 
@@ -387,7 +393,7 @@ java -cp out/production/SpeedFast cl.speedfast.main.Main
 
 `Main` simula una jornada de reparto con siete pedidos, una zona de carga y tres repartidores, en tres bloques:
 
-1. **Zona de carga inicializada.** Los siete pedidos se registran en el controlador y se depositan en la zona de carga, que informa cada ingreso y la cantidad en espera.
+1. **Pedidos de la jornada.** Cada pedido muestra su ficha con `mostrarResumen()`; luego los siete se registran en el controlador y se depositan en la zona de carga, que informa cada ingreso y la cantidad en espera.
 2. **Retiro y entrega concurrente.** Los tres repartidores se ejecutan mediante `ExecutorService` sobre la misma zona. Cada uno retira un pedido, lo marca `EN_REPARTO`, simula el trayecto y lo deja `ENTREGADO`, repitiendo el ciclo hasta agotar la zona.
 3. **Cierre de la jornada.** Se informa el estado final de cada pedido, el historial de entregas del controlador y el reparto del trabajo entre los repartidores.
 
