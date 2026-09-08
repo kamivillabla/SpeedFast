@@ -67,6 +67,24 @@ public abstract class Pedido implements Despachable, Cancelable, Rastreable {
     }
 
     /**
+     * Actualiza el estado del pedido.
+     *
+     * @param estado estado al que pasa el pedido
+     */
+    public void setEstado(EstadoPedido estado) {
+        this.estado = estado;
+    }
+
+    /**
+     * Registra al repartidor que se hace cargo del pedido.
+     *
+     * @param repartidor nombre del repartidor responsable de la entrega
+     */
+    public void setRepartidor(String repartidor) {
+        this.repartidor = repartidor;
+    }
+
+    /**
      * Imprime la ficha del pedido: tipo, identificador, dirección, distancia,
      * repartidor, tiempo estimado de entrega y estado.
      */
@@ -168,6 +186,16 @@ public abstract class Pedido implements Despachable, Cancelable, Rastreable {
         for (int i = 0; i < historial.size(); i++) {
             System.out.println("  " + (i + 1) + ". " + historial.get(i));
         }
+    }
+
+    /**
+     * Describe el pedido en una línea: tipo, identificador, destino y estado.
+     *
+     * @return descripción del pedido
+     */
+    @Override
+    public String toString() {
+        return tipoPedido + " #" + idPedido + " hacia " + direccionEntrega + " [" + estado + "]";
     }
 
     /**
