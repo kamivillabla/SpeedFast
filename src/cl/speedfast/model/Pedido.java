@@ -118,7 +118,7 @@ public abstract class Pedido implements Despachable, Cancelable, Rastreable {
         System.out.println("Despachando " + tipoPedido + " #" + idPedido + "...");
 
         if (estado != EstadoPedido.ASIGNADO) {
-            System.out.println("-> Pedido en estado " + estado + ". No corresponde despacharlo.");
+            System.out.println("-> " + tipoPedido + " #" + idPedido + " en estado " + estado + ". No corresponde despacharlo.");
             return;
         }
 
@@ -126,7 +126,7 @@ public abstract class Pedido implements Despachable, Cancelable, Rastreable {
         estado = EstadoPedido.DESPACHADO;
         registrarEvento("Despachado con entrega estimada en " + tiempoEstimado + " minutos.");
 
-        System.out.println("-> Pedido despachado correctamente. Entrega estimada en " + tiempoEstimado + " minutos.");
+        System.out.println("-> " + tipoPedido + " #" + idPedido + " despachado correctamente. Entrega estimada en " + tiempoEstimado + " minutos.");
     }
 
     /**
