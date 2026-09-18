@@ -6,6 +6,8 @@ Cada tipo de pedido estima su tiempo de entrega con una fórmula distinta y apli
 
 La jornada de reparto se ejecuta de forma concurrente: los pedidos llegan a una zona de carga común y los repartidores los retiran al mismo tiempo, coordinados para que cada pedido lo entregue un único repartidor.
 
+El sistema se opera desde una interfaz gráfica de escritorio construida con Java Swing, en la que se registran los pedidos, se consulta el listado y se gestionan las entregas.
+
 ## Requisitos
 
 - JDK 21
@@ -37,6 +39,11 @@ SpeedFast/
 │           │   ├── ZonaDeCarga.java
 │           │   ├── Repartidor.java
 │           │   └── package-info.java
+│           ├── vista/
+│           │   ├── VentanaPrincipal.java
+│           │   ├── VentanaRegistroPedido.java
+│           │   ├── VentanaListaPedidos.java
+│           │   └── package-info.java
 │           └── main/
 │               ├── Main.java
 │               └── package-info.java
@@ -51,6 +58,7 @@ SpeedFast/
 | `cl.speedfast.model` | Modelo de dominio: la jerarquía de pedidos |
 | `cl.speedfast.gestores` | Coordinación de las operaciones sobre los envíos |
 | `cl.speedfast.concurrencia` | Recurso compartido y ejecución concurrente de las entregas |
+| `cl.speedfast.vista` | Ventanas Swing desde las que se opera el sistema |
 | `cl.speedfast.main` | Punto de entrada de la aplicación |
 
 ## Modelo de clases
@@ -295,6 +303,8 @@ Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarReparti
 | Firma | Descripción |
 |---|---|
 | `registrar(Pedido)` | Incorpora un pedido a la gestión del controlador. |
+| `getEnvios()` | Entrega los envíos registrados, en el orden en que fueron incorporados. |
+| `existeIdPedido(String)` | Indica si el controlador ya gestiona un pedido con ese identificador. |
 | `despachar(Despachable)` | Envía a reparto el envío indicado. |
 | `cancelar(Cancelable)` | Anula el envío indicado. |
 | `verHistorial()` | Imprime los pedidos ya entregados y el repartidor que se hizo cargo de cada uno. |
@@ -330,7 +340,7 @@ Por cada pedido retirado, `run()` lo marca `EN_REPARTO`, simula el trayecto con 
 
 ## Concurrencia
 
-Los pedidos llegan a una zona de carga común y tres repartidores los retiran en paralelo. `Main` los ejecuta mediante un `ExecutorService` con un *pool* fijo de tres hilos y mantiene la simulación abierta hasta que todos terminan su turno.
+Los pedidos llegan a una zona de carga común y los repartidores los retiran en paralelo. Los repartidores implementan `Runnable`, de modo que se ejecutan sobre un `ExecutorService` con un *pool* fijo de hilos que permanece abierto hasta que todos terminan su turno.
 
 | Aspecto | Resolución |
 |---|---|
@@ -338,10 +348,64 @@ Los pedidos llegan a una zona de carga común y tres repartidores los retiran en
 | Recurso compartido | Una única instancia de `ZonaDeCarga` |
 | Sección crítica | Comprobar si quedan pedidos y retirar uno |
 | Mecanismo | Métodos `synchronized` sobre la zona de carga |
-| Término | Espera acotada a un minuto; vencido el plazo, las tareas se detienen |
+| Término | Espera acotada; vencido el plazo, las tareas se detienen |
 | Interrupción | Se restaura la marca del hilo y el repartidor termina su turno |
 
 El reparto del trabajo entre los repartidores cambia entre ejecuciones, porque la planificación de los hilos depende de la máquina virtual y del sistema operativo. Lo que no cambia es el resultado: cada pedido se entrega una sola vez y la zona de carga queda vacía.
+
+## Interfaz gráfica
+
+Las ventanas se construyen con Java Swing y comparten una única instancia de `ControladorDeEnvios`, que es donde residen los pedidos. Ninguna ventana guarda pedidos por su cuenta: consultan el controlador cada vez que necesitan mostrar datos, de modo que un pedido registrado aparece de inmediato en el listado.
+
+| Ventana | Rol |
+|---|---|
+| `VentanaPrincipal` | Reúne las operaciones disponibles y abre la ventana que corresponde a cada una |
+| `VentanaRegistroPedido` | Formulario de alta de pedidos, con validación de los datos ingresados |
+| `VentanaListaPedidos` | Tabla de pedidos registrados y gestión de sus entregas |
+
+### VentanaPrincipal
+
+Organiza sus componentes con `BorderLayout`: el encabezado al norte y, al centro, un `GridLayout` con los tres accesos del sistema.
+
+| Acción | Destino |
+|---|---|
+| Registrar pedido | `VentanaRegistroPedido` |
+| Listar pedidos | `VentanaListaPedidos` |
+| Asignar repartidor / Iniciar entrega | `VentanaListaPedidos` |
+
+Las dos últimas acciones llevan a la misma ventana porque asignar un repartidor e iniciar una entrega exigen elegir antes un pedido, y esa elección se hace sobre la tabla. Las ventanas se crean una sola vez y se reutilizan en las aperturas siguientes.
+
+### VentanaRegistroPedido
+
+Solicita los datos comunes a todo pedido —identificador, dirección, distancia y tipo— y los propios del tipo elegido. Los campos específicos se agrupan en un `CardLayout` que el `JComboBox` conmuta, de manera que el formulario solo pide lo que el pedido necesita.
+
+| Tipo | Campos propios |
+|---|---|
+| Comida | Requiere mochila térmica |
+| Encomienda | Peso en kilos y embalaje |
+| Express | Disponibilidad inmediata |
+
+Ningún pedido se crea con datos incompletos. Antes de construirlo se comprueba que el identificador esté presente y no se repita, que la dirección no esté vacía y que las cantidades sean números mayores que cero. Cuando un dato no supera la validación, el foco vuelve al campo responsable junto con el aviso.
+
+### VentanaListaPedidos
+
+Presenta los pedidos en un `JTable` gobernado por un `DefaultTableModel` de celdas no editables: la tabla informa el estado del sistema y no es la vía para modificarlo.
+
+| Columna | Origen |
+|---|---|
+| ID | `getIdPedido()` |
+| Tipo | `getTipoPedido()` |
+| Dirección | `getDireccionEntrega()` |
+| Distancia (km) | `getDistanciaKm()` |
+| Repartidor | `getRepartidor()` |
+| Tiempo estimado (min) | `calcularTiempoEntrega()` |
+| Estado | `getEstado()` |
+
+La tabla se reconstruye desde el controlador tras cada operación y conserva la fila seleccionada, para que operar dos veces seguidas sobre un mismo pedido no obligue a elegirlo de nuevo.
+
+Sobre el pedido seleccionado se ofrecen dos operaciones. **Asignar repartidor** pide un nombre: si se indica uno, el pedido se asigna a esa persona mediante `asignarRepartidor(String)`; si el campo queda en blanco, `asignarRepartidor()` aplica el criterio automático del tipo de pedido. **Iniciar entrega** despacha el pedido hacia su destino.
+
+Ninguna de las dos operaciones da por hecho su resultado. Como el modelo rechaza las transiciones que no corresponden —un pedido sin repartidor no se despacha, uno que no cumple los requisitos de su tipo queda derivado a revisión—, la ventana compara el estado alcanzado con el esperado y avisa en consecuencia, informando el estado vigente cuando la operación no prospera.
 
 ## Diseño
 
@@ -371,18 +435,22 @@ Un solo mecanismo basta para el problema. No se combinan bloqueos explícitos, s
 
 ### Mantenibilidad
 
-Las responsabilidades están repartidas entre los paquetes: las reglas de negocio en el modelo, la coordinación de los envíos en el gestor, la custodia del recurso compartido en `ZonaDeCarga`, la ejecución de las entregas en `Repartidor` y el armado de la simulación en `Main`.
+Las responsabilidades están repartidas entre los paquetes: las reglas de negocio en el modelo, la coordinación de los envíos en el gestor, la custodia del recurso compartido en `ZonaDeCarga`, la ejecución de las entregas en `Repartidor` y la interacción con el usuario en las ventanas de la vista.
+
+Las ventanas no deciden nada sobre los pedidos: recogen datos, los validan como entrada de formulario y delegan en el modelo y en el controlador. Las reglas que gobiernan cuándo un pedido puede asignarse o despacharse viven en una sola parte, y la interfaz se limita a reflejar el resultado. Por eso un cambio en esas reglas no obliga a tocar la vista, y un cambio en la disposición de una ventana no puede alterar el comportamiento del sistema.
 
 El estado del pedido se modela con el enum `EstadoPedido` y no con banderas booleanas separadas. De esta forma un pedido no puede quedar cancelado y despachado a la vez, y las transiciones válidas quedan concentradas en `despachar()` y `cancelar()`. Un cambio en la manera de cancelar tampoco obliga a modificar las clases que solo necesitan consultar el historial.
 
 ## Ejecución
+
+`Main` crea el controlador de envíos y abre `VentanaPrincipal` en el hilo de despacho de eventos de Swing. El sistema parte sin pedidos: los datos se ingresan desde el formulario de registro.
 
 Desde IntelliJ IDEA, ejecutar `Main`.
 
 Desde la línea de comandos:
 
 ```bash
-javac -encoding UTF-8 -d out/production/SpeedFast src/cl/speedfast/interfaces/*.java src/cl/speedfast/model/*.java src/cl/speedfast/gestores/*.java src/cl/speedfast/concurrencia/*.java src/cl/speedfast/main/*.java
+javac -encoding UTF-8 -d out/production/SpeedFast src/cl/speedfast/interfaces/*.java src/cl/speedfast/model/*.java src/cl/speedfast/gestores/*.java src/cl/speedfast/concurrencia/*.java src/cl/speedfast/vista/*.java src/cl/speedfast/main/*.java
 ```
 
 ```bash
@@ -391,25 +459,23 @@ java -cp out/production/SpeedFast cl.speedfast.main.Main
 
 ## Escenarios de prueba
 
-`Main` simula una jornada de reparto con siete pedidos, una zona de carga y tres repartidores, en tres bloques:
+Los pedidos se ingresan desde la interfaz, de modo que los escenarios se recorren operando las ventanas.
 
-1. **Pedidos de la jornada.** Cada pedido muestra su ficha con `mostrarResumen()`; luego los siete se registran en el controlador y se depositan en la zona de carga, que informa cada ingreso y la cantidad en espera.
-2. **Retiro y entrega concurrente.** Los tres repartidores se ejecutan mediante `ExecutorService` sobre la misma zona. Cada uno retira un pedido, lo marca `EN_REPARTO`, simula el trayecto y lo deja `ENTREGADO`, repitiendo el ciclo hasta agotar la zona.
-3. **Cierre de la jornada.** Se informa el estado final de cada pedido, el historial de entregas del controlador y el reparto del trabajo entre los repartidores.
+| Escenario | Recorrido | Resultado esperado |
+|---|---|---|
+| Registro válido | Completar el formulario con datos correctos para cada tipo | El pedido se confirma y aparece en la tabla en estado `PENDIENTE` |
+| Identificador repetido | Registrar dos pedidos con el mismo ID | El segundo registro se rechaza y el foco vuelve al campo del identificador |
+| Dato no numérico | Ingresar texto en distancia o peso | El registro se rechaza indicando qué dato debe ser un número |
+| Cantidad no positiva | Ingresar cero o un valor negativo en distancia o peso | El registro se rechaza indicando que el valor debe ser mayor que cero |
+| Campos del tipo | Alternar el tipo en el combo | El formulario muestra únicamente los campos propios del tipo elegido |
+| Asignación automática | Asignar repartidor dejando el nombre en blanco | El pedido queda `ASIGNADO` con el repartidor que determina su tipo |
+| Asignación manual | Asignar repartidor indicando un nombre | El pedido queda `ASIGNADO` con el nombre ingresado |
+| Asignación rechazada | Asignar una encomienda que excede el peso máximo | El pedido se deriva a revisión y permanece `PENDIENTE` |
+| Entrega de un pedido sin asignar | Iniciar entrega sobre un pedido `PENDIENTE` | La operación se rechaza informando el estado vigente |
+| Entrega de un pedido asignado | Iniciar entrega sobre un pedido `ASIGNADO` | El pedido queda `DESPACHADO` con su tiempo estimado |
+| Operación sin selección | Pulsar una acción sin elegir fila | La ventana pide seleccionar un pedido de la tabla |
 
-El reparto entre los tres repartidores varía en cada ejecución. Lo que se mantiene es que los siete pedidos se entregan y ninguno se procesa dos veces.
-
-### Comprobación de consistencia
-
-El mensaje final no se imprime de forma incondicional. Antes de darlo por bueno, `Main` verifica tres condiciones:
-
-| Condición | Comprobación |
-|---|---|
-| La zona quedó vacía | `pedidosEnEspera()` devuelve cero |
-| Todos los pedidos llegaron | Los siete están en estado `ENTREGADO` |
-| No hubo entregas duplicadas | La suma de entregas informadas por los repartidores es siete |
-
-Si alguna falla, el programa informa la inconsistencia y detalla qué pedidos quedaron sin entregar, en lugar de anunciar un éxito que no ocurrió.
+Los tres tipos de pedido calculan tiempos distintos para una misma distancia, y la columna de tiempo estimado lo refleja: un trayecto de cinco kilómetros da veinticinco minutos en comida, veintiocho en encomienda y diez en express, que a esa distancia aún no aplica su recargo.
 
 ## Autora
 
