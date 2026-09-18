@@ -7,6 +7,7 @@ import cl.speedfast.model.PedidoEncomienda;
 import cl.speedfast.model.PedidoExpress;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -14,20 +15,22 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
+import java.util.List;
 
 /**
  * Formulario de registro de pedidos.
  *
- * Solicita los datos comunes a todo pedido y los propios del tipo elegido,
- * valida lo ingresado y entrega el pedido resultante al
- * {@link ControladorDeEnvios}. Los campos específicos de cada tipo se muestran
- * según la selección del combo, de modo que el formulario solo pide lo que el
- * pedido necesita.
+ * Solicita los datos comunes a todo pedido y los propios del tipo elegido, y
+ * entrega el pedido resultante al {@link ControladorDeEnvios}. Los campos
+ * específicos de cada tipo se muestran según la selección del combo, de modo que
+ * el formulario solo pide lo que el pedido necesita.
+ *
+ * Cada campo se valida mientras el usuario escribe y señala su propio error, por
+ * lo que un pedido inválido nunca llega a construirse.
  */
 public class VentanaRegistroPedido extends JFrame {
 
@@ -55,23 +58,24 @@ public class VentanaRegistroPedido extends JFrame {
         }
     }
 
-    private static final int ANCHO_PX = 460;
-    private static final int ALTO_PX = 340;
+    private static final int ANCHO_PX = 520;
+    private static final int ALTO_PX = 430;
     private static final int MARGEN_PX = 15;
     private static final int SEPARACION_PX = 8;
     private static final int COLUMNAS_CAMPO = 18;
+    private static final int ANCHO_ETIQUETA_TIPO_PX = 150;
 
     private final ControladorDeEnvios controlador;
     private final Runnable alRegistrarPedido;
 
-    private final JTextField txtId = new JTextField(COLUMNAS_CAMPO);
-    private final JTextField txtDireccion = new JTextField(COLUMNAS_CAMPO);
-    private final JTextField txtDistancia = new JTextField(COLUMNAS_CAMPO);
-    private final JComboBox<TipoPedido> cmbTipo = new JComboBox<>(TipoPedido.values());
+    private final CampoValidado campoId;
+    private final CampoValidado campoDireccion;
+    private final CampoValidado campoDistancia;
+    private final CampoValidado campoPeso;
+    private final CampoValidado campoEmbalaje;
 
+    private final JComboBox<TipoPedido> cmbTipo = new JComboBox<>(TipoPedido.values());
     private final JCheckBox chkMochilaTermica = new JCheckBox("Requiere mochila termica");
-    private final JTextField txtPeso = new JTextField(COLUMNAS_CAMPO);
-    private final JTextField txtEmbalaje = new JTextField(COLUMNAS_CAMPO);
     private final JCheckBox chkDisponibilidadInmediata = new JCheckBox("Disponibilidad inmediata");
 
     private final CardLayout camposPorTipo = new CardLayout();
@@ -88,6 +92,16 @@ public class VentanaRegistroPedido extends JFrame {
         this.controlador = controlador;
         this.alRegistrarPedido = alRegistrarPedido;
 
+        campoId = new CampoValidado("ID del pedido:", COLUMNAS_CAMPO, this::validarId);
+        campoDireccion = new CampoValidado("Direccion de entrega:", COLUMNAS_CAMPO,
+                texto -> texto.isEmpty() ? "Ingresa la direccion de entrega." : null);
+        campoDistancia = new CampoValidado("Distancia (km):", COLUMNAS_CAMPO,
+                texto -> validarNumeroPositivo(texto, "La distancia"));
+        campoPeso = new CampoValidado("Peso (kg):", COLUMNAS_CAMPO,
+                texto -> validarNumeroPositivo(texto, "El peso"));
+        campoEmbalaje = new CampoValidado("Embalaje:", COLUMNAS_CAMPO,
+                texto -> texto.isEmpty() ? "Indica el embalaje de la encomienda." : null);
+
         setTitle("Registrar pedido");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setSize(ANCHO_PX, ALTO_PX);
@@ -97,19 +111,16 @@ public class VentanaRegistroPedido extends JFrame {
         add(crearFormulario(), BorderLayout.CENTER);
         add(crearPanelDeBotones(), BorderLayout.SOUTH);
 
-        cmbTipo.addActionListener(e -> camposPorTipo.show(panelPorTipo, tipoSeleccionado().name()));
+        cmbTipo.addActionListener(e -> mostrarCamposDelTipo());
     }
 
     private JPanel crearFormulario() {
-        JPanel datosComunes = new JPanel(new GridLayout(0, 2, SEPARACION_PX, SEPARACION_PX));
-        datosComunes.add(new JLabel("ID del pedido:"));
-        datosComunes.add(txtId);
-        datosComunes.add(new JLabel("Direccion de entrega:"));
-        datosComunes.add(txtDireccion);
-        datosComunes.add(new JLabel("Distancia (km):"));
-        datosComunes.add(txtDistancia);
-        datosComunes.add(new JLabel("Tipo de pedido:"));
-        datosComunes.add(cmbTipo);
+        JPanel datosComunes = new JPanel();
+        datosComunes.setLayout(new BoxLayout(datosComunes, BoxLayout.Y_AXIS));
+        datosComunes.add(campoId.getFila());
+        datosComunes.add(campoDireccion.getFila());
+        datosComunes.add(campoDistancia.getFila());
+        datosComunes.add(crearFilaTipo());
 
         panelPorTipo.add(crearPanelComida(), TipoPedido.COMIDA.name());
         panelPorTipo.add(crearPanelEncomienda(), TipoPedido.ENCOMIENDA.name());
@@ -123,9 +134,19 @@ public class VentanaRegistroPedido extends JFrame {
         return formulario;
     }
 
+    private JPanel crearFilaTipo() {
+        JLabel titulo = new JLabel("Tipo de pedido:");
+        titulo.setPreferredSize(new Dimension(ANCHO_ETIQUETA_TIPO_PX, cmbTipo.getPreferredSize().height));
+
+        JPanel fila = new JPanel(new BorderLayout());
+        fila.add(titulo, BorderLayout.WEST);
+        fila.add(cmbTipo, BorderLayout.CENTER);
+
+        return fila;
+    }
+
     private JPanel crearPanelComida() {
         JPanel panel = crearPanelDeTipo("Datos del pedido de comida");
-        panel.add(new JLabel());
         panel.add(chkMochilaTermica);
 
         return panel;
@@ -133,24 +154,22 @@ public class VentanaRegistroPedido extends JFrame {
 
     private JPanel crearPanelEncomienda() {
         JPanel panel = crearPanelDeTipo("Datos de la encomienda");
-        panel.add(new JLabel("Peso (kg):"));
-        panel.add(txtPeso);
-        panel.add(new JLabel("Embalaje:"));
-        panel.add(txtEmbalaje);
+        panel.add(campoPeso.getFila());
+        panel.add(campoEmbalaje.getFila());
 
         return panel;
     }
 
     private JPanel crearPanelExpress() {
         JPanel panel = crearPanelDeTipo("Datos del pedido express");
-        panel.add(new JLabel());
         panel.add(chkDisponibilidadInmediata);
 
         return panel;
     }
 
     private JPanel crearPanelDeTipo(String titulo) {
-        JPanel panel = new JPanel(new GridLayout(0, 2, SEPARACION_PX, SEPARACION_PX));
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createTitledBorder(titulo));
 
         return panel;
@@ -178,15 +197,30 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Valida el formulario y, si los datos son correctos, incorpora el pedido al
-     * controlador y deja el formulario listo para el siguiente registro.
+     * Muestra los campos propios del tipo elegido y retira las advertencias de los
+     * que dejan de ser exigibles.
+     */
+    private void mostrarCamposDelTipo() {
+        camposPorTipo.show(panelPorTipo, tipoSeleccionado().name());
+
+        if (tipoSeleccionado() != TipoPedido.ENCOMIENDA) {
+            campoPeso.descartarAdvertencia();
+            campoEmbalaje.descartarAdvertencia();
+        }
+    }
+
+    /**
+     * Registra el pedido cuando todos los campos exigibles son válidos.
+     *
+     * Si alguno no lo es, el formulario destaca los campos pendientes y lleva el
+     * foco al primero de ellos.
      */
     private void guardarPedido() {
-        Pedido pedido = construirPedido();
-
-        if (pedido == null) {
+        if (!formularioValido()) {
             return;
         }
+
+        Pedido pedido = construirPedido();
 
         controlador.registrar(pedido);
         alRegistrarPedido.run();
@@ -199,88 +233,118 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
+     * Comprueba todos los campos exigibles y destaca los que estén pendientes.
+     *
+     * @return true si el formulario puede dar origen a un pedido
+     */
+    private boolean formularioValido() {
+        CampoValidado primerCampoInvalido = null;
+
+        for (CampoValidado campo : camposExigibles()) {
+            if (!campo.validar() && primerCampoInvalido == null) {
+                primerCampoInvalido = campo;
+            }
+        }
+
+        if (primerCampoInvalido == null) {
+            return true;
+        }
+
+        primerCampoInvalido.enfocar();
+
+        return false;
+    }
+
+    /**
+     * Entrega los campos que deben completarse para el tipo de pedido elegido.
+     *
+     * @return los campos exigibles en el orden en que aparecen en el formulario
+     */
+    private List<CampoValidado> camposExigibles() {
+        if (tipoSeleccionado() == TipoPedido.ENCOMIENDA) {
+            return List.of(campoId, campoDireccion, campoDistancia, campoPeso, campoEmbalaje);
+        }
+
+        return List.of(campoId, campoDireccion, campoDistancia);
+    }
+
+    /**
      * Crea el pedido correspondiente al tipo seleccionado.
      *
-     * @return el pedido construido, o null si algún dato no supera la validación
+     * Se invoca una vez que el formulario fue validado, por lo que los campos
+     * numéricos ya contienen valores interpretables.
+     *
+     * @return el pedido construido a partir del formulario
      */
     private Pedido construirPedido() {
-        String id = txtId.getText().trim();
-        String direccion = txtDireccion.getText().trim();
-
-        if (id.isEmpty()) {
-            advertir("Ingresa el ID del pedido.", txtId);
-            return null;
-        }
-
-        if (controlador.existeIdPedido(id)) {
-            advertir("Ya existe un pedido con el ID " + id + ".", txtId);
-            return null;
-        }
-
-        if (direccion.isEmpty()) {
-            advertir("Ingresa la direccion de entrega.", txtDireccion);
-            return null;
-        }
-
-        double distanciaKm = leerNumeroPositivo(txtDistancia, "La distancia");
-
-        if (distanciaKm <= 0) {
-            return null;
-        }
+        String id = campoId.getTexto();
+        String direccion = campoDireccion.getTexto();
+        double distanciaKm = comoNumero(campoDistancia.getTexto());
 
         return switch (tipoSeleccionado()) {
             case COMIDA -> new PedidoComida(id, direccion, distanciaKm, chkMochilaTermica.isSelected());
-            case ENCOMIENDA -> construirEncomienda(id, direccion, distanciaKm);
+            case ENCOMIENDA -> new PedidoEncomienda(id, direccion, distanciaKm,
+                    comoNumero(campoPeso.getTexto()), campoEmbalaje.getTexto());
             case EXPRESS -> new PedidoExpress(id, direccion, distanciaKm, chkDisponibilidadInmediata.isSelected());
         };
     }
 
-    private Pedido construirEncomienda(String id, String direccion, double distanciaKm) {
-        double pesoKg = leerNumeroPositivo(txtPeso, "El peso");
-
-        if (pesoKg <= 0) {
-            return null;
+    /**
+     * Valida el identificador del pedido.
+     *
+     * @param id contenido del campo
+     * @return el motivo del rechazo, o null si el identificador es aceptable
+     */
+    private String validarId(String id) {
+        if (id.isEmpty()) {
+            return "Ingresa el ID del pedido.";
         }
 
-        String embalaje = txtEmbalaje.getText().trim();
-
-        if (embalaje.isEmpty()) {
-            advertir("Indica el embalaje de la encomienda.", txtEmbalaje);
-            return null;
+        if (controlador.existeIdPedido(id)) {
+            return "Ya existe un pedido con el ID " + id + ".";
         }
 
-        return new PedidoEncomienda(id, direccion, distanciaKm, pesoKg, embalaje);
+        return null;
     }
 
     /**
-     * Interpreta el contenido de un campo como un número mayor que cero.
+     * Valida que el contenido de un campo sea un número mayor que cero.
      *
-     * @param campo     campo del formulario que contiene el valor
-     * @param concepto  nombre del dato, usado en el mensaje de advertencia
-     * @return el valor ingresado, o cero si el campo no contiene un número válido
+     * @param texto    contenido del campo
+     * @param concepto nombre del dato, usado para redactar el mensaje
+     * @return el motivo del rechazo, o null si el valor es aceptable
      */
-    private double leerNumeroPositivo(JTextField campo, String concepto) {
-        String valorIngresado = campo.getText().trim().replace(',', '.');
+    private String validarNumeroPositivo(String texto, String concepto) {
+        if (texto.isEmpty()) {
+            return "Este dato es obligatorio.";
+        }
 
         try {
-            double valor = Double.parseDouble(valorIngresado);
+            double valor = comoNumero(texto);
 
-            if (valor <= 0) {
-                advertir(concepto + " debe ser mayor que cero.", campo);
-                return 0;
+            if (!Double.isFinite(valor)) {
+                return concepto + " debe ser un numero. Ejemplo: 4,5";
             }
 
-            return valor;
+            if (valor <= 0) {
+                return concepto + " debe ser mayor que cero.";
+            }
         } catch (NumberFormatException e) {
-            advertir(concepto + " debe ser un numero.", campo);
-            return 0;
+            return concepto + " debe ser un numero. Ejemplo: 4,5";
         }
+
+        return null;
     }
 
-    private void advertir(String mensaje, JTextField campoADestacar) {
-        JOptionPane.showMessageDialog(this, mensaje, "Datos incompletos", JOptionPane.WARNING_MESSAGE);
-        campoADestacar.requestFocusInWindow();
-        campoADestacar.selectAll();
+    /**
+     * Interpreta el contenido de un campo como número decimal, admitiendo coma
+     * como separador.
+     *
+     * @param texto contenido del campo
+     * @return el valor numérico ingresado
+     */
+    private double comoNumero(String texto) {
+        return Double.parseDouble(texto.replace(',', '.'));
     }
 
     private TipoPedido tipoSeleccionado() {
@@ -288,14 +352,14 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     private void limpiarFormulario() {
-        txtId.setText("");
-        txtDireccion.setText("");
-        txtDistancia.setText("");
-        txtPeso.setText("");
-        txtEmbalaje.setText("");
+        campoId.limpiar();
+        campoDireccion.limpiar();
+        campoDistancia.limpiar();
+        campoPeso.limpiar();
+        campoEmbalaje.limpiar();
         chkMochilaTermica.setSelected(false);
         chkDisponibilidadInmediata.setSelected(false);
         cmbTipo.setSelectedItem(TipoPedido.COMIDA);
-        txtId.requestFocusInWindow();
+        campoId.enfocar();
     }
 }
