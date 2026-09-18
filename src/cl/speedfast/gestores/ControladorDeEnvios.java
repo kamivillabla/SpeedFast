@@ -30,6 +30,31 @@ public class ControladorDeEnvios implements Rastreable {
     }
 
     /**
+     * Entrega los pedidos bajo gestión del controlador.
+     *
+     * @return los envíos registrados, en el orden en que fueron incorporados
+     */
+    public List<Pedido> getEnvios() {
+        return List.copyOf(envios);
+    }
+
+    /**
+     * Indica si el controlador ya gestiona un pedido con el identificador dado.
+     *
+     * @param idPedido identificador que se desea comprobar
+     * @return true si el identificador ya está en uso
+     */
+    public boolean existeIdPedido(String idPedido) {
+        for (Pedido envio : envios) {
+            if (envio.getIdPedido().equalsIgnoreCase(idPedido)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Envía a reparto el envío indicado.
      *
      * @param envio envío que debe salir a reparto
