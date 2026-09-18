@@ -41,6 +41,7 @@ SpeedFast/
 │           │   └── package-info.java
 │           ├── vista/
 │           │   ├── CampoValidado.java
+│           │   ├── Validaciones.java
 │           │   ├── VentanaPrincipal.java
 │           │   ├── VentanaRegistroPedido.java
 │           │   ├── VentanaListaPedidos.java
@@ -364,6 +365,7 @@ Las ventanas se construyen con Java Swing y comparten una única instancia de `C
 | `VentanaRegistroPedido` | Formulario de alta de pedidos, con validación de los datos ingresados |
 | `VentanaListaPedidos` | Tabla de pedidos registrados y gestión de sus entregas |
 | `CampoValidado` | Campo de formulario que señala sus propios errores mientras se escribe |
+| `Validaciones` | Reglas de validación reutilizables, combinables por campo |
 
 ### VentanaPrincipal
 
@@ -387,16 +389,35 @@ Solicita los datos comunes a todo pedido —identificador, dirección, distancia
 | Encomienda | Peso en kilos y embalaje |
 | Express | Disponibilidad inmediata |
 
-Ningún pedido se crea con datos incompletos.
+Ningún pedido se crea con datos incompletos ni con valores que el modelo no pueda interpretar.
 
-| Dato | Condición |
+| Dato | Condiciones |
 |---|---|
-| ID del pedido | Presente y sin repetir entre los pedidos ya registrados |
-| Dirección de entrega | No vacía |
-| Distancia y peso | Número finito mayor que cero, con coma o punto como separador |
-| Embalaje | No vacío |
+| ID del pedido | Obligatorio · entre 3 y 20 caracteres · letras, números y guiones, sin espacios · sin repetir entre los pedidos ya registrados |
+| Dirección de entrega | Obligatoria · entre 5 y 120 caracteres · debe incluir letras |
+| Distancia | Obligatoria · número finito entre 0,1 y 100 |
+| Peso | Obligatorio · número finito entre 0,1 y 100 |
+| Embalaje | Obligatorio · entre 3 y 50 caracteres · debe incluir letras |
 
-Al pulsar *Guardar*, el formulario comprueba los campos que el tipo elegido exige, destaca los que estén pendientes y lleva el foco al primero de ellos. Ningún dato llega a `Pedido` sin haber pasado antes por su regla.
+Los campos numéricos admiten coma o punto como separador decimal, y rechazan los textos que no representan una cantidad, incluidos `NaN` e `Infinity`, que de otro modo superarían una simple comparación contra cero.
+
+El límite superior del peso es físico, no reglamentario: una encomienda de más de veinte kilos se registra sin problemas y es el propio `PedidoEncomienda` el que luego rechaza asignarla y la deriva a revisión. Esa regla pertenece al modelo y la vista no la duplica.
+
+Al pulsar *Guardar*, el formulario comprueba los campos que el tipo elegido exige, destaca los que estén pendientes y lleva el foco al primero de ellos. Ningún dato llega a `Pedido` sin haber pasado antes por sus reglas.
+
+### Validaciones
+
+Las reglas son funciones que reciben el contenido de un campo y devuelven el motivo del rechazo, o nada si el valor es aceptable. `Validaciones.todas(...)` las encadena y entrega la primera que se incumple, de modo que cada campo declara sus exigencias en el orden en que conviene informarlas.
+
+| Regla | Exigencia |
+|---|---|
+| `obligatorio(mensaje)` | El campo tiene contenido |
+| `longitudEntre(min, max)` | La extensión está dentro del rango |
+| `formatoDeCodigo()` | Letras, números y guiones, sin espacios ni símbolos |
+| `contieneLetras(mensaje)` | El texto no es solo números o signos |
+| `numeroEntre(concepto, min, max)` | Es un número finito dentro del rango |
+
+Salvo `obligatorio`, todas aceptan el campo vacío: esa condición la cubre una sola regla, y así un campo en blanco muestra un único mensaje en vez de varios a la vez.
 
 ### CampoValidado
 
@@ -493,7 +514,10 @@ Los pedidos se ingresan desde la interfaz, de modo que los escenarios se recorre
 | Registro válido | Completar el formulario con datos correctos para cada tipo | El pedido se confirma y aparece en la tabla en estado `PENDIENTE` |
 | Identificador repetido | Escribir el ID de un pedido ya registrado | El campo se marca en rojo mientras se escribe, indicando el ID en conflicto |
 | Dato no numérico | Escribir texto en distancia o peso | El campo se marca en rojo al teclear, indicando que el dato debe ser un número |
-| Cantidad no positiva | Escribir cero o un valor negativo en distancia o peso | El campo se marca en rojo indicando que el valor debe ser mayor que cero |
+| Cantidad fuera de rango | Escribir cero, un negativo o un valor sobre el máximo | El campo se marca en rojo indicando el rango admitido |
+| Identificador mal formado | Escribir un ID con espacios, símbolos o menos de tres caracteres | El campo se marca en rojo señalando el formato esperado |
+| Dirección sin calle | Escribir solo números en la dirección | El campo se marca en rojo pidiendo el nombre de la calle |
+| Encomienda con sobrepeso | Registrar una encomienda de más de veinte kilos y asignarla | El registro se acepta y la asignación la deriva a revisión |
 | Corrección de un dato | Reemplazar un valor rechazado por uno válido | El borde y el mensaje desaparecen sin necesidad de guardar |
 | Formulario incompleto | Pulsar *Guardar* con campos sin completar | Los campos exigibles se marcan y el foco va al primero pendiente |
 | Campos del tipo | Alternar el tipo en el combo | El formulario muestra los campos propios del tipo y descarta las advertencias de los que ya no aplican |
