@@ -9,6 +9,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.util.function.Function;
@@ -31,11 +32,19 @@ class CampoValidado {
     private static final Color COLOR_ERROR = new Color(178, 34, 34);
     private static final float TAMANO_MENSAJE_PT = 11f;
     private static final int ANCHO_ETIQUETA_PX = 150;
+    private static final int SEPARACION_MENSAJE_PX = 2;
+    private static final int SEPARACION_FILAS_PX = 6;
     private static final String SIN_MENSAJE = " ";
 
     private final JTextField campo;
     private final JLabel mensajeError = new JLabel(SIN_MENSAJE);
-    private final JPanel fila = new JPanel(new BorderLayout());
+    private final JPanel fila = new JPanel(new BorderLayout()) {
+
+        @Override
+        public Dimension getMaximumSize() {
+            return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+        }
+    };
     private final Function<String, String> regla;
     private final Border bordeOriginal;
 
@@ -56,14 +65,17 @@ class CampoValidado {
 
         JLabel titulo = new JLabel(etiqueta);
         titulo.setPreferredSize(new Dimension(ANCHO_ETIQUETA_PX, campo.getPreferredSize().height));
+        titulo.setVerticalAlignment(JLabel.TOP);
 
         mensajeError.setForeground(COLOR_ERROR);
         mensajeError.setFont(mensajeError.getFont().deriveFont(Font.PLAIN, TAMANO_MENSAJE_PT));
 
-        JPanel entrada = new JPanel(new BorderLayout());
+        JPanel entrada = new JPanel(new BorderLayout(0, SEPARACION_MENSAJE_PX));
         entrada.add(campo, BorderLayout.NORTH);
         entrada.add(mensajeError, BorderLayout.SOUTH);
 
+        fila.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fila.setBorder(BorderFactory.createEmptyBorder(0, 0, SEPARACION_FILAS_PX, 0));
         fila.add(titulo, BorderLayout.WEST);
         fila.add(entrada, BorderLayout.CENTER);
 

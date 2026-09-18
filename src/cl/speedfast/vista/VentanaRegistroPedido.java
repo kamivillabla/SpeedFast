@@ -7,6 +7,7 @@ import cl.speedfast.model.PedidoEncomienda;
 import cl.speedfast.model.PedidoExpress;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -17,8 +18,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.LayoutManager;
 import java.util.List;
 
 /**
@@ -58,10 +61,10 @@ public class VentanaRegistroPedido extends JFrame {
         }
     }
 
-    private static final int ANCHO_PX = 520;
-    private static final int ALTO_PX = 430;
-    private static final int MARGEN_PX = 15;
+    private static final int ANCHO_PX = 560;
+    private static final int MARGEN_PX = 18;
     private static final int SEPARACION_PX = 8;
+    private static final int MARGEN_INTERNO_PX = 10;
     private static final int COLUMNAS_CAMPO = 18;
     private static final int ANCHO_ETIQUETA_TIPO_PX = 150;
 
@@ -90,7 +93,7 @@ public class VentanaRegistroPedido extends JFrame {
     private final JCheckBox chkDisponibilidadInmediata = new JCheckBox("Disponibilidad inmediata");
 
     private final CardLayout camposPorTipo = new CardLayout();
-    private final JPanel panelPorTipo = new JPanel(camposPorTipo);
+    private final JPanel panelPorTipo = crearPanelDeAlturaFija(camposPorTipo);
 
     /**
      * Construye el formulario de registro.
@@ -129,32 +132,44 @@ public class VentanaRegistroPedido extends JFrame {
 
         setTitle("Registrar pedido");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(ANCHO_PX, ALTO_PX);
-        setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        add(crearFormulario(), BorderLayout.CENTER);
+        add(crearFormulario(), BorderLayout.NORTH);
         add(crearPanelDeBotones(), BorderLayout.SOUTH);
 
         cmbTipo.addActionListener(e -> mostrarCamposDelTipo());
+
+        pack();
+        setSize(ANCHO_PX, getHeight());
+        setResizable(false);
+        setLocationRelativeTo(null);
     }
 
+    /**
+     * Arma el formulario apilando las filas de arriba hacia abajo.
+     *
+     * El contenido se ancla al borde superior: si ocupara el centro, las filas se
+     * repartirían el espacio sobrante y cada mensaje de error se despegaría del
+     * campo al que pertenece.
+     */
     private JPanel crearFormulario() {
-        JPanel datosComunes = new JPanel();
-        datosComunes.setLayout(new BoxLayout(datosComunes, BoxLayout.Y_AXIS));
-        datosComunes.add(campoId.getFila());
-        datosComunes.add(campoDireccion.getFila());
-        datosComunes.add(campoDistancia.getFila());
-        datosComunes.add(crearFilaTipo());
-
         panelPorTipo.add(crearPanelComida(), TipoPedido.COMIDA.name());
         panelPorTipo.add(crearPanelEncomienda(), TipoPedido.ENCOMIENDA.name());
         panelPorTipo.add(crearPanelExpress(), TipoPedido.EXPRESS.name());
 
-        JPanel formulario = new JPanel(new BorderLayout(0, SEPARACION_PX));
+        JPanel contenido = new JPanel();
+        contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
+        contenido.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contenido.add(campoId.getFila());
+        contenido.add(campoDireccion.getFila());
+        contenido.add(campoDistancia.getFila());
+        contenido.add(crearFilaTipo());
+        contenido.add(Box.createVerticalStrut(SEPARACION_PX));
+        contenido.add(panelPorTipo);
+
+        JPanel formulario = new JPanel(new BorderLayout());
         formulario.setBorder(BorderFactory.createEmptyBorder(MARGEN_PX, MARGEN_PX, SEPARACION_PX, MARGEN_PX));
-        formulario.add(datosComunes, BorderLayout.NORTH);
-        formulario.add(panelPorTipo, BorderLayout.CENTER);
+        formulario.add(contenido, BorderLayout.NORTH);
 
         return formulario;
     }
@@ -163,15 +178,39 @@ public class VentanaRegistroPedido extends JFrame {
         JLabel titulo = new JLabel("Tipo de pedido:");
         titulo.setPreferredSize(new Dimension(ANCHO_ETIQUETA_TIPO_PX, cmbTipo.getPreferredSize().height));
 
-        JPanel fila = new JPanel(new BorderLayout());
+        JPanel fila = crearPanelDeAlturaFija(new BorderLayout());
         fila.add(titulo, BorderLayout.WEST);
         fila.add(cmbTipo, BorderLayout.CENTER);
 
         return fila;
     }
 
+    /**
+     * Crea un panel que no crece más allá de lo que su contenido necesita.
+     *
+     * Dentro de una pila vertical, un panel sin este límite se reparte el espacio
+     * libre y separa sus componentes entre sí.
+     *
+     * @param layout disposición interna del panel
+     * @return el panel, alineado a la izquierda de la pila
+     */
+    private static JPanel crearPanelDeAlturaFija(LayoutManager layout) {
+        JPanel panel = new JPanel(layout) {
+
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
+
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        return panel;
+    }
+
     private JPanel crearPanelComida() {
         JPanel panel = crearPanelDeTipo("Datos del pedido de comida");
+        chkMochilaTermica.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(chkMochilaTermica);
 
         return panel;
@@ -187,15 +226,18 @@ public class VentanaRegistroPedido extends JFrame {
 
     private JPanel crearPanelExpress() {
         JPanel panel = crearPanelDeTipo("Datos del pedido express");
+        chkDisponibilidadInmediata.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(chkDisponibilidadInmediata);
 
         return panel;
     }
 
     private JPanel crearPanelDeTipo(String titulo) {
-        JPanel panel = new JPanel();
+        JPanel panel = crearPanelDeAlturaFija(null);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder(titulo));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(titulo),
+                BorderFactory.createEmptyBorder(MARGEN_INTERNO_PX, 0, MARGEN_INTERNO_PX, MARGEN_INTERNO_PX)));
 
         return panel;
     }
