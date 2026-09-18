@@ -40,6 +40,7 @@ SpeedFast/
 │           │   ├── Repartidor.java
 │           │   └── package-info.java
 │           ├── vista/
+│           │   ├── CampoValidado.java
 │           │   ├── VentanaPrincipal.java
 │           │   ├── VentanaRegistroPedido.java
 │           │   ├── VentanaListaPedidos.java
@@ -362,6 +363,7 @@ Las ventanas se construyen con Java Swing y comparten una única instancia de `C
 | `VentanaPrincipal` | Reúne las operaciones disponibles y abre la ventana que corresponde a cada una |
 | `VentanaRegistroPedido` | Formulario de alta de pedidos, con validación de los datos ingresados |
 | `VentanaListaPedidos` | Tabla de pedidos registrados y gestión de sus entregas |
+| `CampoValidado` | Campo de formulario que señala sus propios errores mientras se escribe |
 
 ### VentanaPrincipal
 
@@ -385,7 +387,32 @@ Solicita los datos comunes a todo pedido —identificador, dirección, distancia
 | Encomienda | Peso en kilos y embalaje |
 | Express | Disponibilidad inmediata |
 
-Ningún pedido se crea con datos incompletos. Antes de construirlo se comprueba que el identificador esté presente y no se repita, que la dirección no esté vacía y que las cantidades sean números mayores que cero. Cuando un dato no supera la validación, el foco vuelve al campo responsable junto con el aviso.
+Ningún pedido se crea con datos incompletos.
+
+| Dato | Condición |
+|---|---|
+| ID del pedido | Presente y sin repetir entre los pedidos ya registrados |
+| Dirección de entrega | No vacía |
+| Distancia y peso | Número finito mayor que cero, con coma o punto como separador |
+| Embalaje | No vacío |
+
+Al pulsar *Guardar*, el formulario comprueba los campos que el tipo elegido exige, destaca los que estén pendientes y lleva el foco al primero de ellos. Ningún dato llega a `Pedido` sin haber pasado antes por su regla.
+
+### CampoValidado
+
+Cada dato del formulario es un `CampoValidado`: una fila que agrupa la etiqueta, el cuadro de texto y su mensaje de error, con la regla de validación que le corresponde.
+
+La comprobación ocurre mientras el usuario escribe. Un `DocumentListener` aplica la regla ante cada modificación del contenido, de modo que el cuadro de texto se rodea de un borde rojo y el motivo aparece bajo el campo en el momento en que el valor deja de ser aceptable, sin esperar al envío del formulario. En cuanto el valor se corrige, el borde y el mensaje desaparecen.
+
+| Situación | Comportamiento |
+|---|---|
+| Formulario recién abierto | Sin advertencias: la regla se aplica ante cambios del usuario, no al construir la ventana |
+| Valor inaceptable | Borde rojo y motivo bajo el campo |
+| Valor corregido | El campo recupera su borde y el mensaje se retira |
+| Formulario limpiado tras guardar | Los campos se vacían sin quedar marcados en rojo |
+| Cambio de tipo de pedido | Los campos que dejan de ser exigibles descartan su advertencia |
+
+El mensaje ocupa siempre una línea, con o sin error, para que el formulario no cambie de tamaño mientras se completa. La regla se entrega como una función que recibe el contenido del campo y devuelve el motivo del rechazo, o nada si el valor es aceptable: así cada campo define qué le resulta válido sin que la clase conozca los datos de un pedido.
 
 ### VentanaListaPedidos
 
@@ -464,10 +491,12 @@ Los pedidos se ingresan desde la interfaz, de modo que los escenarios se recorre
 | Escenario | Recorrido | Resultado esperado |
 |---|---|---|
 | Registro válido | Completar el formulario con datos correctos para cada tipo | El pedido se confirma y aparece en la tabla en estado `PENDIENTE` |
-| Identificador repetido | Registrar dos pedidos con el mismo ID | El segundo registro se rechaza y el foco vuelve al campo del identificador |
-| Dato no numérico | Ingresar texto en distancia o peso | El registro se rechaza indicando qué dato debe ser un número |
-| Cantidad no positiva | Ingresar cero o un valor negativo en distancia o peso | El registro se rechaza indicando que el valor debe ser mayor que cero |
-| Campos del tipo | Alternar el tipo en el combo | El formulario muestra únicamente los campos propios del tipo elegido |
+| Identificador repetido | Escribir el ID de un pedido ya registrado | El campo se marca en rojo mientras se escribe, indicando el ID en conflicto |
+| Dato no numérico | Escribir texto en distancia o peso | El campo se marca en rojo al teclear, indicando que el dato debe ser un número |
+| Cantidad no positiva | Escribir cero o un valor negativo en distancia o peso | El campo se marca en rojo indicando que el valor debe ser mayor que cero |
+| Corrección de un dato | Reemplazar un valor rechazado por uno válido | El borde y el mensaje desaparecen sin necesidad de guardar |
+| Formulario incompleto | Pulsar *Guardar* con campos sin completar | Los campos exigibles se marcan y el foco va al primero pendiente |
+| Campos del tipo | Alternar el tipo en el combo | El formulario muestra los campos propios del tipo y descarta las advertencias de los que ya no aplican |
 | Asignación automática | Asignar repartidor dejando el nombre en blanco | El pedido queda `ASIGNADO` con el repartidor que determina su tipo |
 | Asignación manual | Asignar repartidor indicando un nombre | El pedido queda `ASIGNADO` con el nombre ingresado |
 | Asignación rechazada | Asignar una encomienda que excede el peso máximo | El pedido se deriva a revisión y permanece `PENDIENTE` |
