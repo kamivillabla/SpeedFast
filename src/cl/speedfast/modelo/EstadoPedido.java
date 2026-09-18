@@ -1,4 +1,4 @@
-package cl.speedfast.model;
+package cl.speedfast.modelo;
 
 /**
  * Estados por los que atraviesa un pedido dentro del proceso de entrega.

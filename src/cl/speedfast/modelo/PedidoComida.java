@@ -1,4 +1,4 @@
-package cl.speedfast.model;
+package cl.speedfast.modelo;
 
 /**
  * Pedido de comida desde un restaurante.

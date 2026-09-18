@@ -1,10 +1,10 @@
 package cl.speedfast.vista;
 
 import cl.speedfast.gestores.ControladorDeEnvios;
-import cl.speedfast.model.Pedido;
-import cl.speedfast.model.PedidoComida;
-import cl.speedfast.model.PedidoEncomienda;
-import cl.speedfast.model.PedidoExpress;
+import cl.speedfast.modelo.Pedido;
+import cl.speedfast.modelo.PedidoComida;
+import cl.speedfast.modelo.PedidoEncomienda;
+import cl.speedfast.modelo.PedidoExpress;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;

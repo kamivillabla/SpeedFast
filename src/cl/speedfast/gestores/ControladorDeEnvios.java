@@ -3,8 +3,8 @@ package cl.speedfast.gestores;
 import cl.speedfast.interfaces.Cancelable;
 import cl.speedfast.interfaces.Despachable;
 import cl.speedfast.interfaces.Rastreable;
-import cl.speedfast.model.EstadoPedido;
-import cl.speedfast.model.Pedido;
+import cl.speedfast.modelo.EstadoPedido;
+import cl.speedfast.modelo.Pedido;
 
 import java.util.ArrayList;
 import java.util.List;

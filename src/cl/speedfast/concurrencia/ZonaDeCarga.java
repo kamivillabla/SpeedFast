@@ -1,6 +1,6 @@
 package cl.speedfast.concurrencia;
 
-import cl.speedfast.model.Pedido;
+import cl.speedfast.modelo.Pedido;
 
 import java.util.ArrayList;
 import java.util.List;

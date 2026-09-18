@@ -25,7 +25,7 @@ SpeedFast/
 │           │   ├── Cancelable.java
 │           │   ├── Rastreable.java
 │           │   └── package-info.java
-│           ├── model/
+│           ├── modelo/
 │           │   ├── Pedido.java
 │           │   ├── PedidoComida.java
 │           │   ├── PedidoEncomienda.java
@@ -57,7 +57,7 @@ SpeedFast/
 | Paquete | Contenido |
 |---|---|
 | `cl.speedfast.interfaces` | Contratos de comportamiento |
-| `cl.speedfast.model` | Modelo de dominio: la jerarquía de pedidos |
+| `cl.speedfast.modelo` | Modelo de dominio: la jerarquía de pedidos |
 | `cl.speedfast.gestores` | Coordinación de las operaciones sobre los envíos |
 | `cl.speedfast.concurrencia` | Recurso compartido y ejecución concurrente de las entregas |
 | `cl.speedfast.vista` | Ventanas Swing desde las que se opera el sistema |
@@ -104,7 +104,7 @@ classDiagram
         }
     }
 
-    namespace cl.speedfast.model {
+    namespace cl.speedfast.modelo {
         class Pedido {
             <<abstract>>
             -String idPedido
@@ -508,7 +508,7 @@ Desde IntelliJ IDEA, ejecutar `Main`.
 Desde la línea de comandos:
 
 ```bash
-javac -encoding UTF-8 -d out/production/SpeedFast src/cl/speedfast/interfaces/*.java src/cl/speedfast/model/*.java src/cl/speedfast/gestores/*.java src/cl/speedfast/concurrencia/*.java src/cl/speedfast/vista/*.java src/cl/speedfast/main/*.java
+javac -encoding UTF-8 -d out/production/SpeedFast src/cl/speedfast/interfaces/*.java src/cl/speedfast/modelo/*.java src/cl/speedfast/gestores/*.java src/cl/speedfast/concurrencia/*.java src/cl/speedfast/vista/*.java src/cl/speedfast/main/*.java
 ```
 
 ```bash

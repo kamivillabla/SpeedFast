@@ -1,7 +1,7 @@
 package cl.speedfast.concurrencia;
 
-import cl.speedfast.model.EstadoPedido;
-import cl.speedfast.model.Pedido;
+import cl.speedfast.modelo.EstadoPedido;
+import cl.speedfast.modelo.Pedido;
 
 import java.util.concurrent.ThreadLocalRandom;
 

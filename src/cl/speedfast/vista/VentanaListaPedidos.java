@@ -1,8 +1,8 @@
 package cl.speedfast.vista;
 
 import cl.speedfast.gestores.ControladorDeEnvios;
-import cl.speedfast.model.EstadoPedido;
-import cl.speedfast.model.Pedido;
+import cl.speedfast.modelo.EstadoPedido;
+import cl.speedfast.modelo.Pedido;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
