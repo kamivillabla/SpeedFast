@@ -14,6 +14,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.util.function.Consumer;
 
 /**
  * Ventana de entrada del sistema de pedidos de SpeedFast.
@@ -76,8 +77,9 @@ public class VentanaPrincipal extends JFrame {
         acciones.setBorder(BorderFactory.createEmptyBorder(SEPARACION_PX, MARGEN_PX, MARGEN_PX, MARGEN_PX));
 
         acciones.add(crearBoton("Registrar pedido", e -> mostrarRegistroPedido()));
-        acciones.add(crearBoton("Listar pedidos", e -> mostrarListaPedidos()));
-        acciones.add(crearBoton("Asignar repartidor / Iniciar entrega", e -> mostrarListaPedidos()));
+        acciones.add(crearBoton("Listar pedidos", e -> mostrarPedidos(VentanaListaPedidos::mostrarTodos)));
+        acciones.add(crearBoton("Asignar repartidor / Iniciar entrega",
+                e -> mostrarPedidos(VentanaListaPedidos::mostrarPorGestionar)));
 
         return acciones;
     }
@@ -103,17 +105,20 @@ public class VentanaPrincipal extends JFrame {
     }
 
     /**
-     * Muestra el listado de pedidos con sus datos al día.
+     * Muestra el listado de pedidos con el alcance indicado.
      *
-     * Es también la ventana donde se asigna repartidor y se inicia la entrega,
-     * porque ambas operaciones requieren elegir primero un pedido de la tabla.
+     * Consultar el inventario y gestionar las entregas ocurren sobre la misma
+     * tabla, porque asignar un repartidor o despachar un pedido exige elegirlo
+     * antes. Lo que distingue a una acción de la otra es qué pedidos presenta.
+     *
+     * @param alcance selección de pedidos que debe mostrar la ventana
      */
-    private void mostrarListaPedidos() {
+    private void mostrarPedidos(Consumer<VentanaListaPedidos> alcance) {
         if (ventanaListaPedidos == null) {
             ventanaListaPedidos = new VentanaListaPedidos(controlador);
         }
 
-        ventanaListaPedidos.refrescar();
+        alcance.accept(ventanaListaPedidos);
         ventanaListaPedidos.setVisible(true);
         ventanaListaPedidos.toFront();
     }

@@ -371,13 +371,15 @@ Las ventanas se construyen con Java Swing y comparten una única instancia de `C
 
 Organiza sus componentes con `BorderLayout`: el encabezado al norte y, al centro, un `GridLayout` con los tres accesos del sistema.
 
-| Acción | Destino |
-|---|---|
-| Registrar pedido | `VentanaRegistroPedido` |
-| Listar pedidos | `VentanaListaPedidos` |
-| Asignar repartidor / Iniciar entrega | `VentanaListaPedidos` |
+| Acción | Destino | Alcance |
+|---|---|---|
+| Registrar pedido | `VentanaRegistroPedido` | |
+| Listar pedidos | `VentanaListaPedidos` | Todos los pedidos |
+| Asignar repartidor / Iniciar entrega | `VentanaListaPedidos` | Los que esperan gestión |
 
-Las dos últimas acciones llevan a la misma ventana porque asignar un repartidor e iniciar una entrega exigen elegir antes un pedido, y esa elección se hace sobre la tabla. Las ventanas se crean una sola vez y se reutilizan en las aperturas siguientes.
+Consultar el inventario y gestionar las entregas ocurren sobre la misma tabla, porque asignar un repartidor o despachar un pedido exige elegirlo antes. Lo que distingue a una acción de la otra es qué pedidos presenta: el listado completo, o solo aquellos que todavía admiten una acción. Un pedido despachado o cancelado ya no aparece entre los segundos.
+
+Las ventanas se crean una sola vez y se reutilizan en las aperturas siguientes.
 
 ### VentanaRegistroPedido
 
@@ -453,7 +455,9 @@ Presenta los pedidos en un `JTable` gobernado por un `DefaultTableModel` de celd
 | Tiempo estimado (min) | `calcularTiempoEntrega()` |
 | Estado | `getEstado()` |
 
-La tabla se reconstruye desde el controlador tras cada operación y conserva la fila seleccionada, para que operar dos veces seguidas sobre un mismo pedido no obligue a elegirlo de nuevo.
+La ventana admite dos alcances: `mostrarTodos()` presenta el inventario completo y `mostrarPorGestionar()` deja a la vista solo los pedidos pendientes o asignados, que son los que aún admiten una acción. El título de la ventana anuncia cuál está activo.
+
+La tabla se reconstruye desde el controlador tras cada operación y conserva el pedido elegido, identificándolo por su ID y no por la posición que ocupaba: así, operar dos veces seguidas sobre uno mismo no obliga a buscarlo de nuevo aunque la tabla haya cambiado de contenido.
 
 Sobre el pedido seleccionado se ofrecen dos operaciones. **Asignar repartidor** pide un nombre: si se indica uno, el pedido se asigna a esa persona mediante `asignarRepartidor(String)`; si el campo queda en blanco, `asignarRepartidor()` aplica el criterio automático del tipo de pedido. **Iniciar entrega** despacha el pedido hacia su destino.
 
@@ -532,6 +536,7 @@ Los pedidos se ingresan desde la interfaz, de modo que los escenarios se recorre
 | Entrega de un pedido sin asignar | Iniciar entrega sobre un pedido `PENDIENTE` | La operación se rechaza informando el estado vigente |
 | Entrega de un pedido asignado | Iniciar entrega sobre un pedido `ASIGNADO` | El pedido queda `DESPACHADO` con su tiempo estimado |
 | Operación sin selección | Pulsar una acción sin elegir fila | La ventana pide seleccionar un pedido de la tabla |
+| Alcance del listado | Abrir el listado completo y el de gestión con pedidos en distintos estados | El primero los muestra todos; el segundo omite los despachados y cancelados |
 
 Los tres tipos de pedido calculan tiempos distintos para una misma distancia, y la columna de tiempo estimado lo refleja: un trayecto de cinco kilómetros da veinticinco minutos en comida, veintiocho en encomienda y diez en express, que a esa distancia aún no aplica su recargo.
 

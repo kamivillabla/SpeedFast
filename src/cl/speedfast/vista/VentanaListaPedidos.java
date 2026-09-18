@@ -16,6 +16,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Listado de los pedidos registrados en el sistema.
@@ -23,8 +24,33 @@ import java.util.List;
  * Muestra en una tabla los datos vigentes de cada pedido y permite asignarle un
  * repartidor e iniciar su entrega. Ambas operaciones exigen elegir antes un
  * pedido, por lo que se resuelven sobre la fila seleccionada.
+ *
+ * La ventana se abre con el alcance que pida quien la invoca: el inventario
+ * completo, o solo los pedidos que esperan una gestión.
  */
 public class VentanaListaPedidos extends JFrame {
+
+    /**
+     * Conjunto de pedidos que la ventana presenta.
+     */
+    private enum Alcance {
+
+        /** Todos los pedidos registrados, cualquiera sea su estado. */
+        TODOS("Pedidos registrados", pedido -> true),
+
+        /** Los pedidos que aún admiten asignación o despacho. */
+        POR_GESTIONAR("Pedidos por gestionar",
+                pedido -> pedido.getEstado() == EstadoPedido.PENDIENTE
+                        || pedido.getEstado() == EstadoPedido.ASIGNADO);
+
+        private final String titulo;
+        private final Predicate<Pedido> criterio;
+
+        Alcance(String titulo, Predicate<Pedido> criterio) {
+            this.titulo = titulo;
+            this.criterio = criterio;
+        }
+    }
 
     private static final String[] COLUMNAS = {
             "ID", "Tipo", "Direccion", "Distancia (km)", "Repartidor", "Tiempo estimado (min)", "Estado"};
@@ -49,6 +75,8 @@ public class VentanaListaPedidos extends JFrame {
 
     private final JTable tblPedidos = new JTable(modeloTabla);
 
+    private Alcance alcance = Alcance.TODOS;
+
     /**
      * Construye el listado sobre el controlador indicado.
      *
@@ -57,7 +85,7 @@ public class VentanaListaPedidos extends JFrame {
     public VentanaListaPedidos(ControladorDeEnvios controlador) {
         this.controlador = controlador;
 
-        setTitle("Pedidos registrados");
+        setTitle(alcance.titulo);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setSize(ANCHO_PX, ALTO_PX);
         setLocationRelativeTo(null);
@@ -77,29 +105,70 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     /**
+     * Presenta el inventario completo de pedidos.
+     */
+    public void mostrarTodos() {
+        aplicar(Alcance.TODOS);
+    }
+
+    /**
+     * Presenta solo los pedidos que esperan asignación o despacho.
+     */
+    public void mostrarPorGestionar() {
+        aplicar(Alcance.POR_GESTIONAR);
+    }
+
+    /**
      * Vuelve a cargar la tabla con los datos vigentes de cada pedido.
      *
-     * Conserva la fila seleccionada para que las operaciones sucesivas sobre un
-     * mismo pedido no obliguen a elegirlo de nuevo.
+     * Conserva el pedido elegido, y no la posición que ocupaba, para que las
+     * operaciones sucesivas sobre uno mismo no obliguen a buscarlo de nuevo
+     * cuando la tabla cambia de contenido.
      */
     public void refrescar() {
-        int filaSeleccionada = tblPedidos.getSelectedRow();
+        String idSeleccionado = idDelPedidoSeleccionado();
 
         modeloTabla.setRowCount(0);
 
         for (Pedido pedido : controlador.getEnvios()) {
-            modeloTabla.addRow(new Object[]{
-                    pedido.getIdPedido(),
-                    pedido.getTipoPedido(),
-                    pedido.getDireccionEntrega(),
-                    String.format("%.1f", pedido.getDistanciaKm()),
-                    pedido.getRepartidor() == null ? SIN_REPARTIDOR : pedido.getRepartidor(),
-                    pedido.calcularTiempoEntrega(),
-                    pedido.getEstado()});
+            if (alcance.criterio.test(pedido)) {
+                modeloTabla.addRow(new Object[]{
+                        pedido.getIdPedido(),
+                        pedido.getTipoPedido(),
+                        pedido.getDireccionEntrega(),
+                        String.format("%.1f", pedido.getDistanciaKm()),
+                        pedido.getRepartidor() == null ? SIN_REPARTIDOR : pedido.getRepartidor(),
+                        pedido.calcularTiempoEntrega(),
+                        pedido.getEstado()});
+            }
         }
 
-        if (filaSeleccionada >= 0 && filaSeleccionada < modeloTabla.getRowCount()) {
-            tblPedidos.setRowSelectionInterval(filaSeleccionada, filaSeleccionada);
+        volverASeleccionar(idSeleccionado);
+    }
+
+    private void aplicar(Alcance alcance) {
+        this.alcance = alcance;
+
+        setTitle(alcance.titulo);
+        refrescar();
+    }
+
+    private String idDelPedidoSeleccionado() {
+        int fila = tblPedidos.getSelectedRow();
+
+        return fila < 0 ? null : modeloTabla.getValueAt(fila, COLUMNA_ID).toString();
+    }
+
+    private void volverASeleccionar(String idPedido) {
+        if (idPedido == null) {
+            return;
+        }
+
+        for (int fila = 0; fila < modeloTabla.getRowCount(); fila++) {
+            if (modeloTabla.getValueAt(fila, COLUMNA_ID).equals(idPedido)) {
+                tblPedidos.setRowSelectionInterval(fila, fila);
+                return;
+            }
         }
     }
 
