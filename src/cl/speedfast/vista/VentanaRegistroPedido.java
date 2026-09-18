@@ -65,6 +65,17 @@ public class VentanaRegistroPedido extends JFrame {
     private static final int COLUMNAS_CAMPO = 18;
     private static final int ANCHO_ETIQUETA_TIPO_PX = 150;
 
+    private static final int LARGO_MINIMO_ID = 3;
+    private static final int LARGO_MAXIMO_ID = 20;
+    private static final int LARGO_MINIMO_DIRECCION = 5;
+    private static final int LARGO_MAXIMO_DIRECCION = 120;
+    private static final int LARGO_MINIMO_EMBALAJE = 3;
+    private static final int LARGO_MAXIMO_EMBALAJE = 50;
+    private static final double DISTANCIA_MINIMA_KM = 0.1;
+    private static final double DISTANCIA_MAXIMA_KM = 100.0;
+    private static final double PESO_MINIMO_KG = 0.1;
+    private static final double PESO_MAXIMO_KG = 100.0;
+
     private final ControladorDeEnvios controlador;
     private final Runnable alRegistrarPedido;
 
@@ -92,15 +103,29 @@ public class VentanaRegistroPedido extends JFrame {
         this.controlador = controlador;
         this.alRegistrarPedido = alRegistrarPedido;
 
-        campoId = new CampoValidado("ID del pedido:", COLUMNAS_CAMPO, this::validarId);
-        campoDireccion = new CampoValidado("Direccion de entrega:", COLUMNAS_CAMPO,
-                texto -> texto.isEmpty() ? "Ingresa la direccion de entrega." : null);
-        campoDistancia = new CampoValidado("Distancia (km):", COLUMNAS_CAMPO,
-                texto -> validarNumeroPositivo(texto, "La distancia"));
-        campoPeso = new CampoValidado("Peso (kg):", COLUMNAS_CAMPO,
-                texto -> validarNumeroPositivo(texto, "El peso"));
-        campoEmbalaje = new CampoValidado("Embalaje:", COLUMNAS_CAMPO,
-                texto -> texto.isEmpty() ? "Indica el embalaje de la encomienda." : null);
+        campoId = new CampoValidado("ID del pedido:", COLUMNAS_CAMPO, Validaciones.todas(
+                Validaciones.obligatorio("Ingresa el ID del pedido."),
+                Validaciones.longitudEntre(LARGO_MINIMO_ID, LARGO_MAXIMO_ID),
+                Validaciones.formatoDeCodigo(),
+                this::validarDisponibilidadDelId));
+
+        campoDireccion = new CampoValidado("Direccion de entrega:", COLUMNAS_CAMPO, Validaciones.todas(
+                Validaciones.obligatorio("Ingresa la direccion de entrega."),
+                Validaciones.longitudEntre(LARGO_MINIMO_DIRECCION, LARGO_MAXIMO_DIRECCION),
+                Validaciones.contieneLetras("La direccion debe incluir el nombre de la calle.")));
+
+        campoDistancia = new CampoValidado("Distancia (km):", COLUMNAS_CAMPO, Validaciones.todas(
+                Validaciones.obligatorio("Ingresa la distancia hasta el destino."),
+                Validaciones.numeroEntre("La distancia", DISTANCIA_MINIMA_KM, DISTANCIA_MAXIMA_KM)));
+
+        campoPeso = new CampoValidado("Peso (kg):", COLUMNAS_CAMPO, Validaciones.todas(
+                Validaciones.obligatorio("Ingresa el peso de la encomienda."),
+                Validaciones.numeroEntre("El peso", PESO_MINIMO_KG, PESO_MAXIMO_KG)));
+
+        campoEmbalaje = new CampoValidado("Embalaje:", COLUMNAS_CAMPO, Validaciones.todas(
+                Validaciones.obligatorio("Indica el embalaje de la encomienda."),
+                Validaciones.longitudEntre(LARGO_MINIMO_EMBALAJE, LARGO_MAXIMO_EMBALAJE),
+                Validaciones.contieneLetras("Describe el embalaje con palabras. Ejemplo: caja de carton.")));
 
         setTitle("Registrar pedido");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -279,72 +304,28 @@ public class VentanaRegistroPedido extends JFrame {
     private Pedido construirPedido() {
         String id = campoId.getTexto();
         String direccion = campoDireccion.getTexto();
-        double distanciaKm = comoNumero(campoDistancia.getTexto());
+        double distanciaKm = Validaciones.comoNumero(campoDistancia.getTexto());
 
         return switch (tipoSeleccionado()) {
             case COMIDA -> new PedidoComida(id, direccion, distanciaKm, chkMochilaTermica.isSelected());
             case ENCOMIENDA -> new PedidoEncomienda(id, direccion, distanciaKm,
-                    comoNumero(campoPeso.getTexto()), campoEmbalaje.getTexto());
+                    Validaciones.comoNumero(campoPeso.getTexto()), campoEmbalaje.getTexto());
             case EXPRESS -> new PedidoExpress(id, direccion, distanciaKm, chkDisponibilidadInmediata.isSelected());
         };
     }
 
     /**
-     * Valida el identificador del pedido.
+     * Comprueba que el identificador no esté tomado por otro pedido.
      *
      * @param id contenido del campo
-     * @return el motivo del rechazo, o null si el identificador es aceptable
+     * @return el motivo del rechazo, o null si el identificador está disponible
      */
-    private String validarId(String id) {
-        if (id.isEmpty()) {
-            return "Ingresa el ID del pedido.";
-        }
-
+    private String validarDisponibilidadDelId(String id) {
         if (controlador.existeIdPedido(id)) {
             return "Ya existe un pedido con el ID " + id + ".";
         }
 
         return null;
-    }
-
-    /**
-     * Valida que el contenido de un campo sea un número mayor que cero.
-     *
-     * @param texto    contenido del campo
-     * @param concepto nombre del dato, usado para redactar el mensaje
-     * @return el motivo del rechazo, o null si el valor es aceptable
-     */
-    private String validarNumeroPositivo(String texto, String concepto) {
-        if (texto.isEmpty()) {
-            return "Este dato es obligatorio.";
-        }
-
-        try {
-            double valor = comoNumero(texto);
-
-            if (!Double.isFinite(valor)) {
-                return concepto + " debe ser un numero. Ejemplo: 4,5";
-            }
-
-            if (valor <= 0) {
-                return concepto + " debe ser mayor que cero.";
-            }
-        } catch (NumberFormatException e) {
-            return concepto + " debe ser un numero. Ejemplo: 4,5";
-        }
-
-        return null;
-    }
-
-    /**
-     * Interpreta el contenido de un campo como número decimal, admitiendo coma
-     * como separador.
-     *
-     * @param texto contenido del campo
-     * @return el valor numérico ingresado
-     */
-    private double comoNumero(String texto) {
-        return Double.parseDouble(texto.replace(',', '.'));
     }
 
     private TipoPedido tipoSeleccionado() {
