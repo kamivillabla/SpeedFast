@@ -39,19 +39,19 @@ public class ControladorDeEnvios implements Rastreable {
     }
 
     /**
-     * Indica si el controlador ya gestiona un pedido con el identificador dado.
+     * Busca un identificador ya en uso, sin distinguir mayúsculas de minúsculas.
      *
      * @param idPedido identificador que se desea comprobar
-     * @return true si el identificador ya está en uso
+     * @return el identificador tal como quedó registrado, o null si está disponible
      */
-    public boolean existeIdPedido(String idPedido) {
+    public String buscarIdRegistrado(String idPedido) {
         for (Pedido envio : envios) {
             if (envio.getIdPedido().equalsIgnoreCase(idPedido)) {
-                return true;
+                return envio.getIdPedido();
             }
         }
 
-        return false;
+        return null;
     }
 
     /**

@@ -321,8 +321,10 @@ public class VentanaRegistroPedido extends JFrame {
      * @return el motivo del rechazo, o null si el identificador está disponible
      */
     private String validarDisponibilidadDelId(String id) {
-        if (controlador.existeIdPedido(id)) {
-            return "Ya existe un pedido con el ID " + id + ".";
+        String idRegistrado = controlador.buscarIdRegistrado(id);
+
+        if (idRegistrado != null) {
+            return "Ya existe un pedido con el ID " + idRegistrado + ".";
         }
 
         return null;

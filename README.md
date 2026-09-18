@@ -306,7 +306,7 @@ Cada subclase implementa `calcularTiempoEntrega()` y sobrescribe `asignarReparti
 |---|---|
 | `registrar(Pedido)` | Incorpora un pedido a la gestión del controlador. |
 | `getEnvios()` | Entrega los envíos registrados, en el orden en que fueron incorporados. |
-| `existeIdPedido(String)` | Indica si el controlador ya gestiona un pedido con ese identificador. |
+| `buscarIdRegistrado(String)` | Busca un identificador ya en uso, sin distinguir mayúsculas de minúsculas. |
 | `despachar(Despachable)` | Envía a reparto el envío indicado. |
 | `cancelar(Cancelable)` | Anula el envío indicado. |
 | `verHistorial()` | Imprime los pedidos ya entregados y el repartidor que se hizo cargo de cada uno. |
