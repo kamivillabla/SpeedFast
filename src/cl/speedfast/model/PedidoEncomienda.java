@@ -9,8 +9,15 @@ package cl.speedfast.model;
  */
 public class PedidoEncomienda extends Pedido {
 
+    /**
+     * Peso máximo, en kilos, que un repartidor puede llevar consigo.
+     *
+     * Una encomienda más pesada se registra igual, pero no admite asignación:
+     * requiere vehículo de carga y queda derivada a revisión.
+     */
+    public static final double PESO_MAXIMO_KG = 20.0;
+
     private static final String REPARTIDOR_AUTOMATICO = "Setsuna Meiou";
-    private static final double PESO_MAXIMO_KG = 20.0;
     private static final int TIEMPO_BASE_MIN = 20;
     private static final double MINUTOS_POR_KM = 1.5;
 

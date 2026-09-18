@@ -77,7 +77,7 @@ public class VentanaRegistroPedido extends JFrame {
     private static final double DISTANCIA_MINIMA_KM = 0.1;
     private static final double DISTANCIA_MAXIMA_KM = 100.0;
     private static final double PESO_MINIMO_KG = 0.1;
-    private static final double PESO_MAXIMO_KG = 100.0;
+    private static final double PESO_MAXIMO_REGISTRABLE_KG = 100.0;
 
     private final ControladorDeEnvios controlador;
     private final Runnable alRegistrarPedido;
@@ -123,7 +123,8 @@ public class VentanaRegistroPedido extends JFrame {
 
         campoPeso = new CampoValidado("Peso (kg):", COLUMNAS_CAMPO, Validaciones.todas(
                 Validaciones.obligatorio("Ingresa el peso de la encomienda."),
-                Validaciones.numeroEntre("El peso", PESO_MINIMO_KG, PESO_MAXIMO_KG)));
+                Validaciones.numeroEntre("El peso", PESO_MINIMO_KG, PESO_MAXIMO_REGISTRABLE_KG)));
+        campoPeso.definirAviso(this::advertirSobrepeso);
 
         campoEmbalaje = new CampoValidado("Embalaje:", COLUMNAS_CAMPO, Validaciones.todas(
                 Validaciones.obligatorio("Indica el embalaje de la encomienda."),
@@ -354,6 +355,25 @@ public class VentanaRegistroPedido extends JFrame {
                     Validaciones.comoNumero(campoPeso.getTexto()), campoEmbalaje.getTexto());
             case EXPRESS -> new PedidoExpress(id, direccion, distanciaKm, chkDisponibilidadInmediata.isSelected());
         };
+    }
+
+    /**
+     * Advierte que una encomienda pesada no podrá llevarla un repartidor.
+     *
+     * El límite lo define {@link PedidoEncomienda}, que es donde vive la regla:
+     * el formulario solo la consulta para anticipar el resultado al usuario, sin
+     * impedir el registro.
+     *
+     * @param peso contenido del campo, ya validado como número
+     * @return el texto de la advertencia, o null si el peso no la amerita
+     */
+    private String advertirSobrepeso(String peso) {
+        if (peso.isEmpty() || Validaciones.comoNumero(peso) <= PedidoEncomienda.PESO_MAXIMO_KG) {
+            return null;
+        }
+
+        return "Sobre " + (int) PedidoEncomienda.PESO_MAXIMO_KG
+                + " kg requiere vehiculo de carga: quedara derivada a revision.";
     }
 
     /**

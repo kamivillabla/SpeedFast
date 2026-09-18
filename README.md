@@ -401,13 +401,17 @@ Ningún pedido se crea con datos incompletos ni con valores que el modelo no pue
 
 Los campos numéricos admiten coma o punto como separador decimal, y rechazan los textos que no representan una cantidad, incluidos `NaN` e `Infinity`, que de otro modo superarían una simple comparación contra cero.
 
-El límite superior del peso es físico, no reglamentario: una encomienda de más de veinte kilos se registra sin problemas y es el propio `PedidoEncomienda` el que luego rechaza asignarla y la deriva a revisión. Esa regla pertenece al modelo y la vista no la duplica.
+El límite superior del peso es físico, no reglamentario: una encomienda de más de veinte kilos se registra sin problemas y es el propio `PedidoEncomienda` el que luego rechaza asignarla y la deriva a revisión.
+
+Para que ese desenlace no sorprenda al asignar, el campo advierte en el momento: al superar el peso que un repartidor puede llevar consigo, el cuadro se destaca en ámbar y anuncia que la encomienda requerirá vehículo de carga. Es una advertencia, no un rechazo, y el registro continúa con normalidad. El límite lo publica `PedidoEncomienda.PESO_MAXIMO_KG`, de modo que la vista lo consulta en lugar de repetirlo: la regla sigue perteneciendo al modelo.
 
 Al pulsar *Guardar*, el formulario comprueba los campos que el tipo elegido exige, destaca los que estén pendientes y lleva el foco al primero de ellos. Ningún dato llega a `Pedido` sin haber pasado antes por sus reglas.
 
 ### Validaciones
 
 Las reglas son funciones que reciben el contenido de un campo y devuelven el motivo del rechazo, o nada si el valor es aceptable. `Validaciones.todas(...)` las encadena y entrega la primera que se incumple, de modo que cada campo declara sus exigencias en el orden en que conviene informarlas.
+
+Un campo distingue dos niveles. Un **error** deja el cuadro en rojo e impide registrar el pedido. Un **aviso** lo deja en ámbar para informar algo relevante sobre un valor que, aun así, es aceptable. Cuando ambos coinciden manda el error, porque un dato que no sirve no necesita matices.
 
 | Regla | Exigencia |
 |---|---|
@@ -517,7 +521,8 @@ Los pedidos se ingresan desde la interfaz, de modo que los escenarios se recorre
 | Cantidad fuera de rango | Escribir cero, un negativo o un valor sobre el máximo | El campo se marca en rojo indicando el rango admitido |
 | Identificador mal formado | Escribir un ID con espacios, símbolos o menos de tres caracteres | El campo se marca en rojo señalando el formato esperado |
 | Dirección sin calle | Escribir solo números en la dirección | El campo se marca en rojo pidiendo el nombre de la calle |
-| Encomienda con sobrepeso | Registrar una encomienda de más de veinte kilos y asignarla | El registro se acepta y la asignación la deriva a revisión |
+| Encomienda con sobrepeso | Escribir un peso mayor a veinte kilos | El campo se destaca en ámbar avisando que requerirá vehículo de carga, sin impedir el registro |
+| Sobrepeso al asignar | Asignar repartidor a esa encomienda | La asignación se rechaza y el pedido queda derivado a revisión |
 | Corrección de un dato | Reemplazar un valor rechazado por uno válido | El borde y el mensaje desaparecen sin necesidad de guardar |
 | Formulario incompleto | Pulsar *Guardar* con campos sin completar | Los campos exigibles se marcan y el foco va al primero pendiente |
 | Campos del tipo | Alternar el tipo en el combo | El formulario muestra los campos propios del tipo y descarta las advertencias de los que ya no aplican |

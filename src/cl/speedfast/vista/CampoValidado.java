@@ -30,6 +30,7 @@ import java.util.function.Function;
 class CampoValidado {
 
     private static final Color COLOR_ERROR = new Color(178, 34, 34);
+    private static final Color COLOR_AVISO = new Color(176, 108, 0);
     private static final float TAMANO_MENSAJE_PT = 11f;
     private static final int ANCHO_ETIQUETA_PX = 150;
     private static final int SEPARACION_MENSAJE_PX = 2;
@@ -48,6 +49,7 @@ class CampoValidado {
     private final Function<String, String> regla;
     private final Border bordeOriginal;
 
+    private Function<String, String> aviso = texto -> null;
     private boolean validacionSuspendida;
 
     /**
@@ -67,7 +69,6 @@ class CampoValidado {
         titulo.setPreferredSize(new Dimension(ANCHO_ETIQUETA_PX, campo.getPreferredSize().height));
         titulo.setVerticalAlignment(JLabel.TOP);
 
-        mensajeError.setForeground(COLOR_ERROR);
         mensajeError.setFont(mensajeError.getFont().deriveFont(Font.PLAIN, TAMANO_MENSAJE_PT));
 
         JPanel entrada = new JPanel(new BorderLayout(0, SEPARACION_MENSAJE_PX));
@@ -99,6 +100,19 @@ class CampoValidado {
     }
 
     /**
+     * Añade una advertencia que informa sin impedir el registro.
+     *
+     * Se muestra en ámbar cuando el valor es aceptable pero conviene que el
+     * usuario sepa algo sobre él. Un campo con aviso sigue siendo válido.
+     *
+     * @param aviso regla que recibe el contenido del campo y devuelve el texto a
+     *              mostrar, o null si no hay nada que advertir
+     */
+    void definirAviso(Function<String, String> aviso) {
+        this.aviso = aviso;
+    }
+
+    /**
      * Entrega la fila lista para incorporarse al formulario.
      *
      * @return el panel que agrupa etiqueta, cuadro de texto y mensaje de error
@@ -124,10 +138,20 @@ class CampoValidado {
     boolean validar() {
         String error = regla.apply(getTexto());
 
-        mensajeError.setText(error == null ? SIN_MENSAJE : error);
-        campo.setBorder(error == null ? bordeOriginal : BorderFactory.createLineBorder(COLOR_ERROR));
+        if (error != null) {
+            destacar(error, COLOR_ERROR);
+            return false;
+        }
 
-        return error == null;
+        String advertencia = aviso.apply(getTexto());
+
+        if (advertencia != null) {
+            destacar(advertencia, COLOR_AVISO);
+        } else {
+            descartarAdvertencia();
+        }
+
+        return true;
     }
 
     /**
@@ -158,6 +182,12 @@ class CampoValidado {
     void enfocar() {
         campo.requestFocusInWindow();
         campo.selectAll();
+    }
+
+    private void destacar(String texto, Color color) {
+        mensajeError.setText(texto);
+        mensajeError.setForeground(color);
+        campo.setBorder(BorderFactory.createLineBorder(color));
     }
 
     private void validarCambio() {
