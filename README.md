@@ -371,13 +371,13 @@ Las ventanas se construyen con Java Swing y comparten una única instancia de `C
 
 Organiza sus componentes con `BorderLayout`: el encabezado al norte y, al centro, un `GridLayout` con los tres accesos del sistema.
 
-| Acción | Destino | Alcance |
-|---|---|---|
-| Registrar pedido | `VentanaRegistroPedido` | |
-| Listar pedidos | `VentanaListaPedidos` | Todos los pedidos |
-| Asignar repartidor / Iniciar entrega | `VentanaListaPedidos` | Los que esperan gestión |
+| Acción | Destino | Pedidos que presenta | Operaciones |
+|---|---|---|---|
+| Registrar pedido | `VentanaRegistroPedido` | | Alta de pedidos |
+| Listar pedidos | `VentanaListaPedidos` | Todos | Ninguna: solo consulta |
+| Asignar repartidor / Iniciar entrega | `VentanaListaPedidos` | Los que esperan gestión | Asignar y despachar |
 
-Consultar el inventario y gestionar las entregas ocurren sobre la misma tabla, porque asignar un repartidor o despachar un pedido exige elegirlo antes. Lo que distingue a una acción de la otra es qué pedidos presenta: el listado completo, o solo aquellos que todavía admiten una acción. Un pedido despachado o cancelado ya no aparece entre los segundos.
+Consultar el inventario y gestionar las entregas ocurren sobre la misma tabla, porque asignar un repartidor o despachar un pedido exige elegirlo antes. Lo que distingue a una acción de la otra es qué muestra y qué permite: el listado completo es una vista de consulta y no ofrece botones de operación; la de gestión deja a la vista solo los pedidos que todavía admiten una acción y pone esas acciones a mano. Un pedido despachado o cancelado desaparece de la segunda, pero permanece en la primera.
 
 Las ventanas se crean una sola vez y se reutilizan en las aperturas siguientes.
 
@@ -455,7 +455,9 @@ Presenta los pedidos en un `JTable` gobernado por un `DefaultTableModel` de celd
 | Tiempo estimado (min) | `calcularTiempoEntrega()` |
 | Estado | `getEstado()` |
 
-La ventana admite dos alcances: `mostrarTodos()` presenta el inventario completo y `mostrarPorGestionar()` deja a la vista solo los pedidos pendientes o asignados, que son los que aún admiten una acción. El título de la ventana anuncia cuál está activo.
+La ventana admite dos alcances. `mostrarTodos()` presenta el inventario completo en modo consulta: los botones de operación no aparecen, porque no es ahí donde se opera. `mostrarPorGestionar()` deja a la vista solo los pedidos pendientes o asignados —los que aún admiten una acción— y ofrece los botones para resolverlos. El título de la ventana anuncia cuál está activo.
+
+Cada alcance declara su título, qué pedidos admite y si habilita la gestión, de modo que agregar una vista nueva no obliga a repartir esas decisiones por la clase.
 
 La tabla se reconstruye desde el controlador tras cada operación y conserva el pedido elegido, identificándolo por su ID y no por la posición que ocupaba: así, operar dos veces seguidas sobre uno mismo no obliga a buscarlo de nuevo aunque la tabla haya cambiado de contenido.
 
@@ -537,6 +539,7 @@ Los pedidos se ingresan desde la interfaz, de modo que los escenarios se recorre
 | Entrega de un pedido asignado | Iniciar entrega sobre un pedido `ASIGNADO` | El pedido queda `DESPACHADO` con su tiempo estimado |
 | Operación sin selección | Pulsar una acción sin elegir fila | La ventana pide seleccionar un pedido de la tabla |
 | Alcance del listado | Abrir el listado completo y el de gestión con pedidos en distintos estados | El primero los muestra todos; el segundo omite los despachados y cancelados |
+| Modo de consulta | Abrir el listado completo | La ventana no ofrece botones para asignar ni despachar |
 
 Los tres tipos de pedido calculan tiempos distintos para una misma distancia, y la columna de tiempo estimado lo refleja: un trayecto de cinco kilómetros da veinticinco minutos en comida, veintiocho en encomienda y diez en express, que a esa distancia aún no aplica su recargo.
 

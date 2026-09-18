@@ -35,20 +35,23 @@ public class VentanaListaPedidos extends JFrame {
      */
     private enum Alcance {
 
-        /** Todos los pedidos registrados, cualquiera sea su estado. */
-        TODOS("Pedidos registrados", pedido -> true),
+        /** Todos los pedidos registrados, cualquiera sea su estado, en solo lectura. */
+        TODOS("Pedidos registrados", pedido -> true, false),
 
-        /** Los pedidos que aún admiten asignación o despacho. */
+        /** Los pedidos que aún admiten asignación o despacho, con las acciones a mano. */
         POR_GESTIONAR("Pedidos por gestionar",
                 pedido -> pedido.getEstado() == EstadoPedido.PENDIENTE
-                        || pedido.getEstado() == EstadoPedido.ASIGNADO);
+                        || pedido.getEstado() == EstadoPedido.ASIGNADO,
+                true);
 
         private final String titulo;
         private final Predicate<Pedido> criterio;
+        private final boolean admiteGestion;
 
-        Alcance(String titulo, Predicate<Pedido> criterio) {
+        Alcance(String titulo, Predicate<Pedido> criterio, boolean admiteGestion) {
             this.titulo = titulo;
             this.criterio = criterio;
+            this.admiteGestion = admiteGestion;
         }
     }
 
@@ -74,6 +77,7 @@ public class VentanaListaPedidos extends JFrame {
     };
 
     private final JTable tblPedidos = new JTable(modeloTabla);
+    private final JPanel accionesDeGestion = new JPanel(new FlowLayout(FlowLayout.RIGHT, SEPARACION_PX, 0));
 
     private Alcance alcance = Alcance.TODOS;
 
@@ -101,18 +105,19 @@ public class VentanaListaPedidos extends JFrame {
         add(contenedorTabla, BorderLayout.CENTER);
         add(crearPanelDeBotones(), BorderLayout.SOUTH);
 
-        refrescar();
+        aplicar(alcance);
     }
 
     /**
-     * Presenta el inventario completo de pedidos.
+     * Presenta el inventario completo de pedidos, solo para consulta.
      */
     public void mostrarTodos() {
         aplicar(Alcance.TODOS);
     }
 
     /**
-     * Presenta solo los pedidos que esperan asignación o despacho.
+     * Presenta los pedidos que esperan asignación o despacho, junto a las
+     * acciones que permiten resolverlos.
      */
     public void mostrarPorGestionar() {
         aplicar(Alcance.POR_GESTIONAR);
@@ -146,10 +151,19 @@ public class VentanaListaPedidos extends JFrame {
         volverASeleccionar(idSeleccionado);
     }
 
+    /**
+     * Ajusta la ventana al alcance indicado.
+     *
+     * Las acciones sobre los pedidos solo se ofrecen donde corresponde operar: en
+     * el listado completo la ventana es de consulta, y sus botones no aparecen.
+     *
+     * @param alcance selección de pedidos y permisos que rigen la ventana
+     */
     private void aplicar(Alcance alcance) {
         this.alcance = alcance;
 
         setTitle(alcance.titulo);
+        accionesDeGestion.setVisible(alcance.admiteGestion);
         refrescar();
     }
 
@@ -182,11 +196,13 @@ public class VentanaListaPedidos extends JFrame {
         JButton btnActualizar = new JButton("Actualizar");
         btnActualizar.addActionListener(e -> refrescar());
 
+        accionesDeGestion.add(btnAsignar);
+        accionesDeGestion.add(btnIniciarEntrega);
+
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT, SEPARACION_PX, SEPARACION_PX));
         botones.setBorder(BorderFactory.createEmptyBorder(0, MARGEN_PX, SEPARACION_PX, MARGEN_PX));
         botones.add(btnActualizar);
-        botones.add(btnAsignar);
-        botones.add(btnIniciarEntrega);
+        botones.add(accionesDeGestion);
 
         return botones;
     }
