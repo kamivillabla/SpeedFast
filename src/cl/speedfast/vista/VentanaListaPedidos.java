@@ -1,11 +1,16 @@
 package cl.speedfast.vista;
 
-import cl.speedfast.gestores.ControladorDeEnvios;
+import cl.speedfast.dao.EntregaDAO;
+import cl.speedfast.dao.PedidoDAO;
+import cl.speedfast.dao.RepartidorDAO;
+import cl.speedfast.modelo.Entrega;
 import cl.speedfast.modelo.EstadoPedido;
 import cl.speedfast.modelo.Pedido;
+import cl.speedfast.modelo.Repartidor;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -15,15 +20,20 @@ import javax.swing.ListSelectionModel;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.function.Predicate;
 
 /**
- * Listado de los pedidos registrados en el sistema.
+ * Listado de los pedidos almacenados en la base de datos.
  *
- * Muestra en una tabla los datos vigentes de cada pedido y permite asignarle un
- * repartidor e iniciar su entrega. Ambas operaciones exigen elegir antes un
- * pedido, por lo que se resuelven sobre la fila seleccionada.
+ * Cada vez que se refresca, la tabla consulta los pedidos mediante
+ * {@link PedidoDAO}, por lo que refleja lo que realmente existe en la base de
+ * datos. Desde el listado de gestión se registra la entrega de un pedido a cargo
+ * de un repartidor, lo que exige elegir antes el pedido en la tabla.
  *
  * La ventana se abre con el alcance que pida quien la invoca: el inventario
  * completo, o solo los pedidos que esperan una gestión.
@@ -38,7 +48,7 @@ public class VentanaListaPedidos extends JFrame {
         /** Todos los pedidos registrados, cualquiera sea su estado, en solo lectura. */
         TODOS("Pedidos registrados", pedido -> true, false),
 
-        /** Los pedidos que aún admiten asignación o despacho, con las acciones a mano. */
+        /** Los pedidos que aún esperan su entrega, con la acción de registrarla a mano. */
         POR_GESTIONAR("Pedidos por gestionar",
                 pedido -> pedido.getEstado() == EstadoPedido.PENDIENTE
                         || pedido.getEstado() == EstadoPedido.ASIGNADO,
@@ -55,18 +65,17 @@ public class VentanaListaPedidos extends JFrame {
         }
     }
 
-    private static final String[] COLUMNAS = {
-            "ID", "Tipo", "Direccion", "Distancia (km)", "Repartidor", "Tiempo estimado (min)", "Estado"};
+    private static final String[] COLUMNAS = {"ID", "Tipo", "Direccion", "Estado"};
 
-    private static final String SIN_REPARTIDOR = "Sin asignar";
-
-    private static final int ANCHO_PX = 820;
+    private static final int ANCHO_PX = 720;
     private static final int ALTO_PX = 360;
     private static final int MARGEN_PX = 15;
     private static final int SEPARACION_PX = 8;
     private static final int COLUMNA_ID = 0;
 
-    private final ControladorDeEnvios controlador;
+    private final PedidoDAO pedidoDAO = new PedidoDAO();
+    private final RepartidorDAO repartidorDAO = new RepartidorDAO();
+    private final EntregaDAO entregaDAO = new EntregaDAO();
 
     private final DefaultTableModel modeloTabla = new DefaultTableModel(COLUMNAS, 0) {
 
@@ -82,13 +91,9 @@ public class VentanaListaPedidos extends JFrame {
     private Alcance alcance = Alcance.TODOS;
 
     /**
-     * Construye el listado sobre el controlador indicado.
-     *
-     * @param controlador controlador que mantiene los pedidos del sistema
+     * Construye el listado de pedidos.
      */
-    public VentanaListaPedidos(ControladorDeEnvios controlador) {
-        this.controlador = controlador;
-
+    public VentanaListaPedidos() {
         setTitle(alcance.titulo);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setSize(ANCHO_PX, ALTO_PX);
@@ -104,8 +109,6 @@ public class VentanaListaPedidos extends JFrame {
 
         add(contenedorTabla, BorderLayout.CENTER);
         add(crearPanelDeBotones(), BorderLayout.SOUTH);
-
-        aplicar(alcance);
     }
 
     /**
@@ -116,34 +119,40 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     /**
-     * Presenta los pedidos que esperan asignación o despacho, junto a las
-     * acciones que permiten resolverlos.
+     * Presenta los pedidos que esperan su entrega, junto a la acción que permite
+     * registrarla.
      */
     public void mostrarPorGestionar() {
         aplicar(Alcance.POR_GESTIONAR);
     }
 
     /**
-     * Vuelve a cargar la tabla con los datos vigentes de cada pedido.
+     * Vuelve a cargar la tabla con los pedidos almacenados en la base de datos.
      *
      * Conserva el pedido elegido, y no la posición que ocupaba, para que las
      * operaciones sucesivas sobre uno mismo no obliguen a buscarlo de nuevo
      * cuando la tabla cambia de contenido.
      */
     public void refrescar() {
+        List<Pedido> pedidos;
+
+        try {
+            pedidos = pedidoDAO.listarTodos();
+        } catch (SQLException e) {
+            informarError(e);
+            return;
+        }
+
         String idSeleccionado = idDelPedidoSeleccionado();
 
         modeloTabla.setRowCount(0);
 
-        for (Pedido pedido : controlador.getEnvios()) {
+        for (Pedido pedido : pedidos) {
             if (alcance.criterio.test(pedido)) {
                 modeloTabla.addRow(new Object[]{
                         pedido.getIdPedido(),
                         pedido.getTipoPedido(),
                         pedido.getDireccionEntrega(),
-                        String.format("%.1f", pedido.getDistanciaKm()),
-                        pedido.getRepartidor() == null ? SIN_REPARTIDOR : pedido.getRepartidor(),
-                        pedido.calcularTiempoEntrega(),
                         pedido.getEstado()});
             }
         }
@@ -187,17 +196,13 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     private JPanel crearPanelDeBotones() {
-        JButton btnAsignar = new JButton("Asignar repartidor");
-        btnAsignar.addActionListener(e -> asignarRepartidor());
-
-        JButton btnIniciarEntrega = new JButton("Iniciar entrega");
-        btnIniciarEntrega.addActionListener(e -> iniciarEntrega());
+        JButton btnRegistrarEntrega = new JButton("Registrar entrega");
+        btnRegistrarEntrega.addActionListener(e -> registrarEntrega());
 
         JButton btnActualizar = new JButton("Actualizar");
         btnActualizar.addActionListener(e -> refrescar());
 
-        accionesDeGestion.add(btnAsignar);
-        accionesDeGestion.add(btnIniciarEntrega);
+        accionesDeGestion.add(btnRegistrarEntrega);
 
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT, SEPARACION_PX, SEPARACION_PX));
         botones.setBorder(BorderFactory.createEmptyBorder(0, MARGEN_PX, SEPARACION_PX, MARGEN_PX));
@@ -208,103 +213,69 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     /**
-     * Asigna un repartidor al pedido seleccionado.
+     * Registra la entrega del pedido seleccionado a cargo del repartidor que elija
+     * el usuario.
      *
-     * Si el usuario indica un nombre, el pedido se asigna a esa persona; si deja
-     * el campo vacío, cada tipo de pedido aplica su propio criterio de asignación
-     * automática.
+     * Los repartidores disponibles se consultan en la base de datos, y la entrega
+     * queda registrada con la fecha y hora del momento.
      */
-    private void asignarRepartidor() {
-        Pedido pedido = pedidoSeleccionado();
+    private void registrarEntrega() {
+        String idPedido = idDelPedidoSeleccionado();
 
-        if (pedido == null) {
-            return;
-        }
-
-        String nombreRepartidor = JOptionPane.showInputDialog(this,
-                "Nombre del repartidor.\nDejalo en blanco para asignarlo automaticamente.",
-                "Asignar repartidor para " + pedido.getIdPedido(),
-                JOptionPane.QUESTION_MESSAGE);
-
-        if (nombreRepartidor == null) {
-            return;
-        }
-
-        if (nombreRepartidor.isBlank()) {
-            pedido.asignarRepartidor();
-        } else {
-            pedido.asignarRepartidor(nombreRepartidor.trim());
-        }
-
-        refrescar();
-        informarResultado(pedido, EstadoPedido.ASIGNADO,
-                "Pedido asignado a " + pedido.getRepartidor() + ".",
-                "El pedido no cumple los requisitos de su tipo y quedo derivado a revision.");
-    }
-
-    /**
-     * Despacha el pedido seleccionado hacia su dirección de entrega.
-     */
-    private void iniciarEntrega() {
-        Pedido pedido = pedidoSeleccionado();
-
-        if (pedido == null) {
-            return;
-        }
-
-        pedido.despachar();
-
-        refrescar();
-        informarResultado(pedido, EstadoPedido.DESPACHADO,
-                "Entrega iniciada. Tiempo estimado: " + pedido.calcularTiempoEntrega() + " minutos.",
-                "Solo se despachan los pedidos con repartidor asignado.");
-    }
-
-    /**
-     * Obtiene el pedido correspondiente a la fila seleccionada en la tabla.
-     *
-     * @return el pedido elegido, o null si no hay ninguna fila seleccionada
-     */
-    private Pedido pedidoSeleccionado() {
-        int fila = tblPedidos.getSelectedRow();
-
-        if (fila < 0) {
+        if (idPedido == null) {
             JOptionPane.showMessageDialog(this,
                     "Selecciona un pedido de la tabla.",
                     "Ningun pedido seleccionado",
                     JOptionPane.WARNING_MESSAGE);
-            return null;
+            return;
         }
 
-        String idPedido = modeloTabla.getValueAt(fila, COLUMNA_ID).toString();
-        List<Pedido> envios = controlador.getEnvios();
+        List<Repartidor> repartidores;
 
-        for (Pedido envio : envios) {
-            if (envio.getIdPedido().equals(idPedido)) {
-                return envio;
-            }
+        try {
+            repartidores = repartidorDAO.listarTodos();
+        } catch (SQLException e) {
+            informarError(e);
+            return;
         }
 
-        return null;
-    }
+        if (repartidores.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No hay repartidores registrados. Registra uno antes de asignar la entrega.",
+                    "Sin repartidores",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-    /**
-     * Informa al usuario si la operación surtió efecto.
-     *
-     * @param pedido           pedido sobre el que se operó
-     * @param estadoEsperado   estado que alcanza el pedido cuando la operación prospera
-     * @param mensajeDeExito   detalle que se muestra al alcanzar ese estado
-     * @param mensajeDeRechazo detalle que se muestra cuando el pedido no lo admite
-     */
-    private void informarResultado(Pedido pedido, EstadoPedido estadoEsperado,
-                                   String mensajeDeExito, String mensajeDeRechazo) {
-        boolean operacionAceptada = pedido.getEstado() == estadoEsperado;
+        JComboBox<Repartidor> cmbRepartidores = new JComboBox<>(repartidores.toArray(new Repartidor[0]));
+
+        int opcion = JOptionPane.showConfirmDialog(this, cmbRepartidores,
+                "Repartidor para el pedido #" + idPedido,
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+        if (opcion != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        Repartidor repartidor = (Repartidor) cmbRepartidores.getSelectedItem();
+        Entrega entrega = new Entrega(Integer.parseInt(idPedido), repartidor.getId(),
+                LocalDate.now(), LocalTime.now().truncatedTo(ChronoUnit.SECONDS));
+
+        try {
+            entregaDAO.guardar(entrega);
+        } catch (SQLException e) {
+            informarError(e);
+            return;
+        }
 
         JOptionPane.showMessageDialog(this,
-                operacionAceptada
-                        ? mensajeDeExito
-                        : mensajeDeRechazo + "\nEstado actual: " + pedido.getEstado() + ".",
-                pedido.getTipoPedido() + " " + pedido.getIdPedido(),
-                operacionAceptada ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
+                "Entrega #" + entrega.getId() + " registrada: pedido #" + idPedido
+                        + " a cargo de " + repartidor.getNombre() + ".",
+                "Registro exitoso",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void informarError(SQLException e) {
+        JOptionPane.showMessageDialog(this, e.getMessage(), "Error de base de datos", JOptionPane.ERROR_MESSAGE);
     }
 }
