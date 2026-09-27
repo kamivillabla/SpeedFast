@@ -42,6 +42,15 @@ public abstract class Pedido implements Despachable, Cancelable, Rastreable {
         return idPedido;
     }
 
+    /**
+     * Registra el identificador asignado por la base de datos.
+     *
+     * @param idPedido identificador generado al guardar el pedido
+     */
+    public void setIdPedido(String idPedido) {
+        this.idPedido = idPedido;
+    }
+
     public String getDireccionEntrega() {
         return direccionEntrega;
     }
