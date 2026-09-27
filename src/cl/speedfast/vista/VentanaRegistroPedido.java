@@ -1,6 +1,6 @@
 package cl.speedfast.vista;
 
-import cl.speedfast.gestores.ControladorDeEnvios;
+import cl.speedfast.dao.PedidoDAO;
 import cl.speedfast.modelo.Pedido;
 import cl.speedfast.modelo.PedidoComida;
 import cl.speedfast.modelo.PedidoEncomienda;
@@ -22,13 +22,15 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.LayoutManager;
+import java.sql.SQLException;
 import java.util.List;
 
 /**
  * Formulario de registro de pedidos.
  *
  * Solicita los datos comunes a todo pedido y los propios del tipo elegido, y
- * entrega el pedido resultante al {@link ControladorDeEnvios}. Los campos
+ * guarda el pedido resultante en la base de datos mediante {@link PedidoDAO}. El
+ * identificador lo genera la base de datos al registrarlo. Los campos
  * específicos de cada tipo se muestran según la selección del combo, de modo que
  * el formulario solo pide lo que el pedido necesita.
  *
@@ -68,8 +70,6 @@ public class VentanaRegistroPedido extends JFrame {
     private static final int COLUMNAS_CAMPO = 18;
     private static final int ANCHO_ETIQUETA_TIPO_PX = 150;
 
-    private static final int LARGO_MINIMO_ID = 3;
-    private static final int LARGO_MAXIMO_ID = 20;
     private static final int LARGO_MINIMO_DIRECCION = 5;
     private static final int LARGO_MAXIMO_DIRECCION = 120;
     private static final int LARGO_MINIMO_EMBALAJE = 3;
@@ -79,10 +79,9 @@ public class VentanaRegistroPedido extends JFrame {
     private static final double PESO_MINIMO_KG = 0.1;
     private static final double PESO_MAXIMO_REGISTRABLE_KG = 100.0;
 
-    private final ControladorDeEnvios controlador;
+    private final PedidoDAO pedidoDAO = new PedidoDAO();
     private final Runnable alRegistrarPedido;
 
-    private final CampoValidado campoId;
     private final CampoValidado campoDireccion;
     private final CampoValidado campoDistancia;
     private final CampoValidado campoPeso;
@@ -98,19 +97,11 @@ public class VentanaRegistroPedido extends JFrame {
     /**
      * Construye el formulario de registro.
      *
-     * @param controlador       controlador que incorpora los pedidos creados
      * @param alRegistrarPedido acción que notifica al resto de la aplicación que
      *                          hay un pedido nuevo
      */
-    public VentanaRegistroPedido(ControladorDeEnvios controlador, Runnable alRegistrarPedido) {
-        this.controlador = controlador;
+    public VentanaRegistroPedido(Runnable alRegistrarPedido) {
         this.alRegistrarPedido = alRegistrarPedido;
-
-        campoId = new CampoValidado("ID del pedido:", COLUMNAS_CAMPO, Validaciones.todas(
-                Validaciones.obligatorio("Ingresa el ID del pedido."),
-                Validaciones.longitudEntre(LARGO_MINIMO_ID, LARGO_MAXIMO_ID),
-                Validaciones.formatoDeCodigo(),
-                this::validarDisponibilidadDelId));
 
         campoDireccion = new CampoValidado("Direccion de entrega:", COLUMNAS_CAMPO, Validaciones.todas(
                 Validaciones.obligatorio("Ingresa la direccion de entrega."),
@@ -161,7 +152,6 @@ public class VentanaRegistroPedido extends JFrame {
         JPanel contenido = new JPanel();
         contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
         contenido.setAlignmentX(Component.LEFT_ALIGNMENT);
-        contenido.add(campoId.getFila());
         contenido.add(campoDireccion.getFila());
         contenido.add(campoDistancia.getFila());
         contenido.add(crearFilaTipo());
@@ -278,10 +268,12 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Registra el pedido cuando todos los campos exigibles son válidos.
+     * Guarda el pedido en la base de datos cuando todos los campos exigibles son
+     * válidos.
      *
      * Si alguno no lo es, el formulario destaca los campos pendientes y lleva el
-     * foco al primero de ellos.
+     * foco al primero de ellos. Si la base de datos rechaza la operación, el
+     * formulario conserva los datos ingresados e informa el motivo.
      */
     private void guardarPedido() {
         if (!formularioValido()) {
@@ -290,7 +282,13 @@ public class VentanaRegistroPedido extends JFrame {
 
         Pedido pedido = construirPedido();
 
-        controlador.registrar(pedido);
+        try {
+            pedidoDAO.guardar(pedido);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error de base de datos", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         alRegistrarPedido.run();
         limpiarFormulario();
 
@@ -330,30 +328,30 @@ public class VentanaRegistroPedido extends JFrame {
      */
     private List<CampoValidado> camposExigibles() {
         if (tipoSeleccionado() == TipoPedido.ENCOMIENDA) {
-            return List.of(campoId, campoDireccion, campoDistancia, campoPeso, campoEmbalaje);
+            return List.of(campoDireccion, campoDistancia, campoPeso, campoEmbalaje);
         }
 
-        return List.of(campoId, campoDireccion, campoDistancia);
+        return List.of(campoDireccion, campoDistancia);
     }
 
     /**
      * Crea el pedido correspondiente al tipo seleccionado.
      *
-     * Se invoca una vez que el formulario fue validado, por lo que los campos
+     * El identificador queda pendiente hasta que la base de datos lo asigne. Se
+     * invoca una vez que el formulario fue validado, por lo que los campos
      * numéricos ya contienen valores interpretables.
      *
      * @return el pedido construido a partir del formulario
      */
     private Pedido construirPedido() {
-        String id = campoId.getTexto();
         String direccion = campoDireccion.getTexto();
         double distanciaKm = Validaciones.comoNumero(campoDistancia.getTexto());
 
         return switch (tipoSeleccionado()) {
-            case COMIDA -> new PedidoComida(id, direccion, distanciaKm, chkMochilaTermica.isSelected());
-            case ENCOMIENDA -> new PedidoEncomienda(id, direccion, distanciaKm,
+            case COMIDA -> new PedidoComida(null, direccion, distanciaKm, chkMochilaTermica.isSelected());
+            case ENCOMIENDA -> new PedidoEncomienda(null, direccion, distanciaKm,
                     Validaciones.comoNumero(campoPeso.getTexto()), campoEmbalaje.getTexto());
-            case EXPRESS -> new PedidoExpress(id, direccion, distanciaKm, chkDisponibilidadInmediata.isSelected());
+            case EXPRESS -> new PedidoExpress(null, direccion, distanciaKm, chkDisponibilidadInmediata.isSelected());
         };
     }
 
@@ -376,28 +374,11 @@ public class VentanaRegistroPedido extends JFrame {
                 + " kg requiere vehiculo de carga: quedara derivada a revision.";
     }
 
-    /**
-     * Comprueba que el identificador no esté tomado por otro pedido.
-     *
-     * @param id contenido del campo
-     * @return el motivo del rechazo, o null si el identificador está disponible
-     */
-    private String validarDisponibilidadDelId(String id) {
-        String idRegistrado = controlador.buscarIdRegistrado(id);
-
-        if (idRegistrado != null) {
-            return "Ya existe un pedido con el ID " + idRegistrado + ".";
-        }
-
-        return null;
-    }
-
     private TipoPedido tipoSeleccionado() {
         return (TipoPedido) cmbTipo.getSelectedItem();
     }
 
     private void limpiarFormulario() {
-        campoId.limpiar();
         campoDireccion.limpiar();
         campoDistancia.limpiar();
         campoPeso.limpiar();
@@ -405,6 +386,6 @@ public class VentanaRegistroPedido extends JFrame {
         chkMochilaTermica.setSelected(false);
         chkDisponibilidadInmediata.setSelected(false);
         cmbTipo.setSelectedItem(TipoPedido.COMIDA);
-        campoId.enfocar();
+        campoDireccion.enfocar();
     }
 }

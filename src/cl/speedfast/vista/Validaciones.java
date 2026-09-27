@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
  */
 final class Validaciones {
 
-    private static final Pattern CODIGO = Pattern.compile("[A-Za-z0-9]+([-_][A-Za-z0-9]+)*");
     private static final Pattern CONTIENE_LETRA = Pattern.compile(".*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ].*");
     private static final Locale LOCALE_CHILE = Locale.of("es", "CL");
 
@@ -66,21 +65,6 @@ final class Validaciones {
             }
 
             return "Debe tener entre " + minimo + " y " + maximo + " caracteres.";
-        };
-    }
-
-    /**
-     * Exige un código formado por letras, números y guiones, sin espacios.
-     *
-     * @return la regla correspondiente
-     */
-    static Function<String, String> formatoDeCodigo() {
-        return texto -> {
-            if (texto.isEmpty() || CODIGO.matcher(texto).matches()) {
-                return null;
-            }
-
-            return "Usa solo letras, numeros y guiones, sin espacios.";
         };
     }
 
