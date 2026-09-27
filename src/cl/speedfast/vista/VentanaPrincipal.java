@@ -1,7 +1,5 @@
 package cl.speedfast.vista;
 
-import cl.speedfast.gestores.ControladorDeEnvios;
-
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -20,30 +18,25 @@ import java.util.function.Consumer;
  * Ventana de entrada del sistema de pedidos de SpeedFast.
  *
  * Reúne las operaciones disponibles para el usuario y abre la ventana que
- * corresponde a cada una. Todas las ventanas comparten el mismo
- * {@link ControladorDeEnvios}, de modo que los pedidos registrados quedan
- * visibles de inmediato en el listado.
+ * corresponde a cada una. Todas las ventanas trabajan sobre la base de datos, de
+ * modo que los pedidos registrados quedan visibles de inmediato en el listado y
+ * se conservan al cerrar la aplicación.
  */
 public class VentanaPrincipal extends JFrame {
 
     private static final int ANCHO_PX = 420;
-    private static final int ALTO_PX = 280;
+    private static final int ALTO_PX = 330;
     private static final int MARGEN_PX = 20;
     private static final int SEPARACION_PX = 10;
 
-    private final ControladorDeEnvios controlador;
-
     private VentanaListaPedidos ventanaListaPedidos;
     private VentanaRegistroPedido ventanaRegistroPedido;
+    private VentanaRegistroRepartidor ventanaRegistroRepartidor;
 
     /**
-     * Construye la ventana principal sobre el controlador indicado.
-     *
-     * @param controlador controlador que mantiene los pedidos del sistema
+     * Construye la ventana principal.
      */
-    public VentanaPrincipal(ControladorDeEnvios controlador) {
-        this.controlador = controlador;
-
+    public VentanaPrincipal() {
         setTitle("SpeedFast - Gestion de entregas");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(ANCHO_PX, ALTO_PX);
@@ -73,12 +66,13 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private JPanel crearPanelDeAcciones() {
-        JPanel acciones = new JPanel(new GridLayout(3, 1, SEPARACION_PX, SEPARACION_PX));
+        JPanel acciones = new JPanel(new GridLayout(4, 1, SEPARACION_PX, SEPARACION_PX));
         acciones.setBorder(BorderFactory.createEmptyBorder(SEPARACION_PX, MARGEN_PX, MARGEN_PX, MARGEN_PX));
 
         acciones.add(crearBoton("Registrar pedido", e -> mostrarRegistroPedido()));
+        acciones.add(crearBoton("Registrar repartidor", e -> mostrarRegistroRepartidor()));
         acciones.add(crearBoton("Listar pedidos", e -> mostrarPedidos(VentanaListaPedidos::mostrarTodos)));
-        acciones.add(crearBoton("Asignar repartidor / Iniciar entrega",
+        acciones.add(crearBoton("Registrar entrega",
                 e -> mostrarPedidos(VentanaListaPedidos::mostrarPorGestionar)));
 
         return acciones;
@@ -97,7 +91,7 @@ public class VentanaPrincipal extends JFrame {
      */
     private void mostrarRegistroPedido() {
         if (ventanaRegistroPedido == null) {
-            ventanaRegistroPedido = new VentanaRegistroPedido(controlador, this::refrescarListaPedidos);
+            ventanaRegistroPedido = new VentanaRegistroPedido(this::refrescarListaPedidos);
         }
 
         ventanaRegistroPedido.setVisible(true);
@@ -105,17 +99,28 @@ public class VentanaPrincipal extends JFrame {
     }
 
     /**
+     * Muestra el formulario de repartidores, reutilizando la ventana si ya está abierta.
+     */
+    private void mostrarRegistroRepartidor() {
+        if (ventanaRegistroRepartidor == null) {
+            ventanaRegistroRepartidor = new VentanaRegistroRepartidor();
+        }
+
+        ventanaRegistroRepartidor.setVisible(true);
+        ventanaRegistroRepartidor.toFront();
+    }
+
+    /**
      * Muestra el listado de pedidos con el alcance indicado.
      *
-     * Consultar el inventario y gestionar las entregas ocurren sobre la misma
-     * tabla, porque asignar un repartidor o despachar un pedido exige elegirlo
-     * antes. Lo que distingue a una acción de la otra es qué pedidos presenta.
+     * Consultar el inventario y registrar las entregas ocurren sobre la misma
+     * tabla, porque registrar la entrega de un pedido exige elegirlo antes. Lo que distingue a una acción de la otra es qué pedidos presenta.
      *
      * @param alcance selección de pedidos que debe mostrar la ventana
      */
     private void mostrarPedidos(Consumer<VentanaListaPedidos> alcance) {
         if (ventanaListaPedidos == null) {
-            ventanaListaPedidos = new VentanaListaPedidos(controlador);
+            ventanaListaPedidos = new VentanaListaPedidos();
         }
 
         alcance.accept(ventanaListaPedidos);
