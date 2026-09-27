@@ -12,9 +12,6 @@ import java.sql.Time;
 
 /**
  * Acceso a la tabla {@code entrega}.
- *
- * Las claves foráneas de la tabla garantizan que cada entrega apunte a un pedido
- * y a un repartidor existentes.
  */
 public class EntregaDAO {
 

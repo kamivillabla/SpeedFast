@@ -12,8 +12,8 @@ public class PedidoEncomienda extends Pedido {
     /**
      * Peso máximo, en kilos, que un repartidor puede llevar consigo.
      *
-     * Una encomienda más pesada se registra igual, pero no admite asignación:
-     * requiere vehículo de carga y queda derivada a revisión.
+     * Una encomienda más pesada se registra, pero no admite asignación y queda
+     * derivada a revisión.
      */
     public static final double PESO_MAXIMO_KG = 20.0;
 
@@ -39,9 +39,6 @@ public class PedidoEncomienda extends Pedido {
     }
 
     /**
-     * 20 minutos base más 1,5 minutos por kilómetro, redondeado a entero.
-     */
-    /**
      * Agrega a la ficha el peso y el embalaje de la encomienda.
      */
     @Override
@@ -50,6 +47,9 @@ public class PedidoEncomienda extends Pedido {
         System.out.printf("Contenido: %.1f kg en %s%n", getPesoKg(), getEmbalaje());
     }
 
+    /**
+     * 20 minutos base más 1,5 minutos por kilómetro, redondeado a entero.
+     */
     @Override
     public int calcularTiempoEntrega() {
         return (int) Math.round(TIEMPO_BASE_MIN + MINUTOS_POR_KM * getDistanciaKm());

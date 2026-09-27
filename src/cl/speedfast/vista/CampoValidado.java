@@ -22,10 +22,8 @@ import java.util.function.Function;
  * valor no es aceptable, el cuadro de texto se destaca con un borde rojo y el
  * motivo aparece bajo el campo.
  *
- * El mensaje ocupa siempre una línea, con o sin error, para que el formulario no
- * cambie de tamaño mientras se completa. La validación se dispara solo ante
- * cambios hechos por el usuario: un formulario recién abierto o recién limpiado
- * no se presenta lleno de advertencias.
+ * El mensaje ocupa siempre una línea. La validación se aplica solo ante cambios
+ * hechos por el usuario.
  */
 class CampoValidado {
 
@@ -102,8 +100,7 @@ class CampoValidado {
     /**
      * Añade una advertencia que informa sin impedir el registro.
      *
-     * Se muestra en ámbar cuando el valor es aceptable pero conviene que el
-     * usuario sepa algo sobre él. Un campo con aviso sigue siendo válido.
+     * Se muestra en ámbar y no invalida el campo.
      *
      * @param aviso regla que recibe el contenido del campo y devuelve el texto a
      *              mostrar, o null si no hay nada que advertir
@@ -169,7 +166,7 @@ class CampoValidado {
      * Retira la advertencia visible sin alterar el contenido del campo.
      *
      * Se aplica a los campos que dejan de ser exigibles al cambiar el tipo de
-     * pedido, para que no sigan señalando un error que ya no corresponde.
+     * pedido.
      */
     void descartarAdvertencia() {
         mensajeError.setText(SIN_MENSAJE);

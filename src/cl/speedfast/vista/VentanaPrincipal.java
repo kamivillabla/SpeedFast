@@ -17,10 +17,8 @@ import java.util.function.Consumer;
 /**
  * Ventana de entrada del sistema de pedidos de SpeedFast.
  *
- * Reúne las operaciones disponibles para el usuario y abre la ventana que
- * corresponde a cada una. Todas las ventanas trabajan sobre la base de datos, de
- * modo que los pedidos registrados quedan visibles de inmediato en el listado y
- * se conservan al cerrar la aplicación.
+ * Reúne las operaciones disponibles y abre la ventana que corresponde a cada
+ * una.
  */
 public class VentanaPrincipal extends JFrame {
 
@@ -111,10 +109,8 @@ public class VentanaPrincipal extends JFrame {
     }
 
     /**
-     * Muestra el listado de pedidos con el alcance indicado.
-     *
-     * Consultar el inventario y registrar las entregas ocurren sobre la misma
-     * tabla, porque registrar la entrega de un pedido exige elegirlo antes. Lo que distingue a una acción de la otra es qué pedidos presenta.
+     * Muestra el listado de pedidos con el alcance indicado, reutilizando la
+     * ventana si ya está abierta.
      *
      * @param alcance selección de pedidos que debe mostrar la ventana
      */

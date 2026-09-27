@@ -26,9 +26,6 @@ public class PedidoExpress extends Pedido {
     }
 
     /**
-     * 10 minutos base; si la distancia supera los 5 km se suman 5 minutos.
-     */
-    /**
      * Agrega a la ficha si la compra tiene disponibilidad inmediata.
      */
     @Override
@@ -37,6 +34,9 @@ public class PedidoExpress extends Pedido {
         System.out.println("Disponibilidad inmediata: " + (isDisponibilidadInmediata() ? "si" : "no"));
     }
 
+    /**
+     * 10 minutos base; si la distancia supera los 5 km se suman 5 minutos.
+     */
     @Override
     public int calcularTiempoEntrega() {
         if (getDistanciaKm() > DISTANCIA_LIMITE_KM) {

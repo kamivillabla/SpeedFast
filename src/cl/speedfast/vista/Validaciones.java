@@ -8,9 +8,7 @@ import java.util.regex.Pattern;
  * Reglas de validación para los campos de los formularios.
  *
  * Cada regla recibe el contenido de un campo y devuelve el motivo del rechazo, o
- * null si el valor es aceptable, que es el contrato que espera
- * {@link CampoValidado}. Las reglas se combinan con {@link #todas} para que un
- * mismo campo exija varias condiciones y muestre la primera que incumple.
+ * null si el valor es aceptable. Las reglas se combinan con {@link #todas}.
  */
 final class Validaciones {
 
@@ -87,8 +85,8 @@ final class Validaciones {
     /**
      * Exige un número dentro del rango indicado.
      *
-     * Admite coma o punto como separador decimal y rechaza los valores que no
-     * representan una cantidad, como los infinitos.
+     * Admite coma o punto como separador decimal y rechaza los valores no
+     * finitos.
      *
      * @param concepto nombre del dato, usado para redactar el motivo del rechazo
      * @param minimo   valor mínimo aceptado

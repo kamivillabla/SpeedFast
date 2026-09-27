@@ -15,8 +15,7 @@ import java.sql.SQLException;
 /**
  * Formulario de registro de repartidores.
  *
- * Solicita el nombre del repartidor y lo guarda en la base de datos mediante
- * {@link RepartidorDAO}. El identificador lo genera la base de datos.
+ * Solicita el nombre del repartidor y lo guarda mediante {@link RepartidorDAO}.
  */
 public class VentanaRegistroRepartidor extends JFrame {
 
@@ -78,10 +77,8 @@ public class VentanaRegistroRepartidor extends JFrame {
     }
 
     /**
-     * Guarda el repartidor en la base de datos cuando el nombre es válido.
-     *
-     * Si la base de datos rechaza la operación, el formulario conserva el nombre
-     * ingresado e informa el motivo.
+     * Guarda el repartidor cuando el nombre es válido. Si la base de datos rechaza
+     * la operación, informa el motivo y conserva el nombre.
      */
     private void guardarRepartidor() {
         if (!campoNombre.validar()) {

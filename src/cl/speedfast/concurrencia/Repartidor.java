@@ -8,13 +8,9 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Repartidor que retira pedidos de la zona de carga y los entrega.
  *
- * Implementa {@link Runnable}, de modo que varios repartidores pueden trabajar
- * al mismo tiempo sobre la misma {@link ZonaDeCarga}. Cada uno retira un pedido,
- * lo marca en reparto, simula el trayecto con una pausa de duración aleatoria y
- * lo da por entregado, repitiendo el ciclo hasta que la zona queda vacía.
- *
- * Un pedido retirado ya no está en la zona, por lo que desde ese momento un solo
- * repartidor trabaja sobre él.
+ * Implementa {@link Runnable}. Cada repartidor retira un pedido de la
+ * {@link ZonaDeCarga} compartida, lo marca en reparto, simula el trayecto con una
+ * pausa de duración aleatoria y lo da por entregado, hasta que la zona queda vacía.
  */
 public class Repartidor implements Runnable {
 

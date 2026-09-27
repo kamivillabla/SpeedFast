@@ -29,21 +29,16 @@ import java.util.List;
  * Formulario de registro de pedidos.
  *
  * Solicita los datos comunes a todo pedido y los propios del tipo elegido, y
- * guarda el pedido resultante en la base de datos mediante {@link PedidoDAO}. El
- * identificador lo genera la base de datos al registrarlo. Los campos
- * específicos de cada tipo se muestran según la selección del combo, de modo que
- * el formulario solo pide lo que el pedido necesita.
- *
- * Cada campo se valida mientras el usuario escribe y señala su propio error, por
- * lo que un pedido inválido nunca llega a construirse.
+ * guarda el pedido mediante {@link PedidoDAO}. El identificador lo genera la base
+ * de datos. Cada campo se valida mientras el usuario escribe.
  */
 public class VentanaRegistroPedido extends JFrame {
 
     /**
      * Tipos de pedido que ofrece el formulario.
      *
-     * Cada valor corresponde a una subclase de {@link Pedido} y da nombre al
-     * panel de campos específicos que se muestra al seleccionarlo.
+     * Cada valor corresponde a una subclase de {@link Pedido} y a un panel de
+     * campos específicos.
      */
     private enum TipoPedido {
 
@@ -138,11 +133,7 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Arma el formulario apilando las filas de arriba hacia abajo.
-     *
-     * El contenido se ancla al borde superior: si ocupara el centro, las filas se
-     * repartirían el espacio sobrante y cada mensaje de error se despegaría del
-     * campo al que pertenece.
+     * Arma el formulario como una pila vertical anclada al borde superior.
      */
     private JPanel crearFormulario() {
         panelPorTipo.add(crearPanelComida(), TipoPedido.COMIDA.name());
@@ -177,10 +168,7 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Crea un panel que no crece más allá de lo que su contenido necesita.
-     *
-     * Dentro de una pila vertical, un panel sin este límite se reparte el espacio
-     * libre y separa sus componentes entre sí.
+     * Crea un panel cuya altura máxima es la de su contenido.
      *
      * @param layout disposición interna del panel
      * @return el panel, alineado a la izquierda de la pila
@@ -268,12 +256,10 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Guarda el pedido en la base de datos cuando todos los campos exigibles son
-     * válidos.
+     * Guarda el pedido cuando todos los campos exigibles son válidos.
      *
-     * Si alguno no lo es, el formulario destaca los campos pendientes y lleva el
-     * foco al primero de ellos. Si la base de datos rechaza la operación, el
-     * formulario conserva los datos ingresados e informa el motivo.
+     * Si alguno no lo es, destaca los pendientes y enfoca el primero. Si la base de
+     * datos rechaza la operación, informa el motivo y conserva los datos.
      */
     private void guardarPedido() {
         if (!formularioValido()) {
@@ -335,11 +321,8 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Crea el pedido correspondiente al tipo seleccionado.
-     *
-     * El identificador queda pendiente hasta que la base de datos lo asigne. Se
-     * invoca una vez que el formulario fue validado, por lo que los campos
-     * numéricos ya contienen valores interpretables.
+     * Crea el pedido del tipo seleccionado a partir del formulario ya validado.
+     * El identificador queda sin asignar hasta guardarlo.
      *
      * @return el pedido construido a partir del formulario
      */
@@ -356,11 +339,8 @@ public class VentanaRegistroPedido extends JFrame {
     }
 
     /**
-     * Advierte que una encomienda pesada no podrá llevarla un repartidor.
-     *
-     * El límite lo define {@link PedidoEncomienda}, que es donde vive la regla:
-     * el formulario solo la consulta para anticipar el resultado al usuario, sin
-     * impedir el registro.
+     * Advierte que la encomienda supera {@link PedidoEncomienda#PESO_MAXIMO_KG}.
+     * La advertencia no impide el registro.
      *
      * @param peso contenido del campo, ya validado como número
      * @return el texto de la advertencia, o null si el peso no la amerita

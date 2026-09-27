@@ -7,8 +7,7 @@ import javax.swing.SwingUtilities;
 /**
  * Punto de entrada del sistema de pedidos de SpeedFast.
  *
- * Abre la ventana principal en el hilo de despacho de eventos de Swing. Los datos
- * se leen y guardan en la base de datos {@code speedfast_db}.
+ * Abre la ventana principal en el hilo de despacho de eventos de Swing.
  */
 public class Main {
 

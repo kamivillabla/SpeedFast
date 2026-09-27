@@ -3,8 +3,7 @@ package cl.speedfast.modelo;
 /**
  * Repartidor registrado en SpeedFast.
  *
- * Corresponde a una fila de la tabla {@code repartidor}. El identificador lo
- * genera la base de datos al registrarlo.
+ * Corresponde a una fila de la tabla {@code repartidor}.
  */
 public class Repartidor {
 

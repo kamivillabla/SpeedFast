@@ -8,10 +8,8 @@ import java.util.List;
 /**
  * Zona de carga desde la que los repartidores retiran los pedidos.
  *
- * Es el único recurso que los repartidores comparten: todos trabajan sobre la
- * misma instancia. Como varios hilos pueden intentar retirar al mismo tiempo,
- * las operaciones que consultan y modifican los pedidos en espera están
- * sincronizadas.
+ * Recurso compartido por los repartidores. Las operaciones que consultan y
+ * modifican los pedidos en espera están sincronizadas.
  */
 public class ZonaDeCarga {
 
@@ -31,9 +29,8 @@ public class ZonaDeCarga {
     /**
      * Entrega el siguiente pedido en espera a un único repartidor.
      *
-     * Comprobar si quedan pedidos y retirar uno forman una sola operación
-     * indivisible: el pedido sale de la zona antes de que otro hilo pueda
-     * consultarla, de modo que dos repartidores nunca reciben el mismo pedido.
+     * La comprobación de pedidos disponibles y el retiro forman una sola
+     * operación sincronizada.
      *
      * @return el siguiente pedido en espera, o {@code null} si la zona está vacía
      */

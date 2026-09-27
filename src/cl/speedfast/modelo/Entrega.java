@@ -6,8 +6,8 @@ import java.time.LocalTime;
 /**
  * Entrega de SpeedFast: relaciona un pedido con el repartidor que lo lleva.
  *
- * Corresponde a una fila de la tabla {@code entrega}. Un mismo pedido puede
- * acumular varias entregas si pasa por más de un intento o etapa.
+ * Corresponde a una fila de la tabla {@code entrega}. Un pedido puede tener
+ * varias entregas.
  */
 public class Entrega {
 

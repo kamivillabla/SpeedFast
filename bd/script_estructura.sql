@@ -1,7 +1,5 @@
--- Estructura de la base de datos de SpeedFast.
--- Ejecutar completo en MySQL Workbench o por consola antes de iniciar la aplicación.
-
 CREATE DATABASE IF NOT EXISTS speedfast_db;
+
 USE speedfast_db;
 
 CREATE TABLE repartidor (
@@ -12,8 +10,8 @@ CREATE TABLE repartidor (
 CREATE TABLE pedido (
     id INT AUTO_INCREMENT PRIMARY KEY,
     direccion VARCHAR(150) NOT NULL,
-    tipo VARCHAR(30) NOT NULL,      -- COMIDA | ENCOMIENDA | EXPRESS
-    estado VARCHAR(20) NOT NULL     -- PENDIENTE | EN_REPARTO | ENTREGADO
+    tipo VARCHAR(30) NOT NULL,
+    estado VARCHAR(20) NOT NULL
 );
 
 CREATE TABLE entrega (
@@ -22,6 +20,6 @@ CREATE TABLE entrega (
     id_repartidor INT NOT NULL,
     fecha DATE NOT NULL,
     hora TIME NOT NULL,
-    FOREIGN KEY (id_pedido) REFERENCES pedido(id),
-    FOREIGN KEY (id_repartidor) REFERENCES repartidor(id)
+    FOREIGN KEY (id_pedido) REFERENCES pedido (id),
+    FOREIGN KEY (id_repartidor) REFERENCES repartidor (id)
 );

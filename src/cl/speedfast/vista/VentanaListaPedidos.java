@@ -30,13 +30,9 @@ import java.util.function.Predicate;
 /**
  * Listado de los pedidos almacenados en la base de datos.
  *
- * Cada vez que se refresca, la tabla consulta los pedidos mediante
- * {@link PedidoDAO}, por lo que refleja lo que realmente existe en la base de
- * datos. Desde el listado de gestión se registra la entrega de un pedido a cargo
- * de un repartidor, lo que exige elegir antes el pedido en la tabla.
- *
- * La ventana se abre con el alcance que pida quien la invoca: el inventario
- * completo, o solo los pedidos que esperan una gestión.
+ * La tabla se carga mediante {@link PedidoDAO}. La ventana presenta el
+ * inventario completo, en solo lectura, o los pedidos que esperan su entrega,
+ * sobre los que permite registrarla.
  */
 public class VentanaListaPedidos extends JFrame {
 
@@ -48,7 +44,7 @@ public class VentanaListaPedidos extends JFrame {
         /** Todos los pedidos registrados, cualquiera sea su estado, en solo lectura. */
         TODOS("Pedidos registrados", pedido -> true, false),
 
-        /** Los pedidos que aún esperan su entrega, con la acción de registrarla a mano. */
+        /** Los pedidos que aún esperan su entrega, con la acción de registrarla. */
         POR_GESTIONAR("Pedidos por gestionar",
                 pedido -> pedido.getEstado() == EstadoPedido.PENDIENTE
                         || pedido.getEstado() == EstadoPedido.ASIGNADO,
@@ -127,11 +123,8 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     /**
-     * Vuelve a cargar la tabla con los pedidos almacenados en la base de datos.
-     *
-     * Conserva el pedido elegido, y no la posición que ocupaba, para que las
-     * operaciones sucesivas sobre uno mismo no obliguen a buscarlo de nuevo
-     * cuando la tabla cambia de contenido.
+     * Vuelve a cargar la tabla desde la base de datos y mantiene seleccionado el
+     * mismo pedido.
      */
     public void refrescar() {
         List<Pedido> pedidos;
@@ -161,10 +154,8 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     /**
-     * Ajusta la ventana al alcance indicado.
-     *
-     * Las acciones sobre los pedidos solo se ofrecen donde corresponde operar: en
-     * el listado completo la ventana es de consulta, y sus botones no aparecen.
+     * Ajusta el título, el contenido y las acciones de la ventana al alcance
+     * indicado.
      *
      * @param alcance selección de pedidos y permisos que rigen la ventana
      */
@@ -213,11 +204,8 @@ public class VentanaListaPedidos extends JFrame {
     }
 
     /**
-     * Registra la entrega del pedido seleccionado a cargo del repartidor que elija
-     * el usuario.
-     *
-     * Los repartidores disponibles se consultan en la base de datos, y la entrega
-     * queda registrada con la fecha y hora del momento.
+     * Registra la entrega del pedido seleccionado a cargo del repartidor elegido,
+     * con la fecha y hora actuales.
      */
     private void registrarEntrega() {
         String idPedido = idDelPedidoSeleccionado();

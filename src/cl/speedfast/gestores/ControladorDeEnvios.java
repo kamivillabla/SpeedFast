@@ -13,8 +13,7 @@ import java.util.List;
  * Coordina las operaciones sobre los envíos de SpeedFast.
  *
  * Despacha y cancela a través de los contratos {@link Despachable} y
- * {@link Cancelable}, por lo que no depende del tipo concreto de pedido, y
- * mantiene el registro de las entregas realizadas.
+ * {@link Cancelable} y mantiene el registro de las entregas realizadas.
  */
 public class ControladorDeEnvios implements Rastreable {
 

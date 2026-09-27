@@ -17,10 +17,9 @@ import java.util.List;
 /**
  * Acceso a la tabla {@code pedido}.
  *
- * La tabla conserva los datos comunes a todo pedido: dirección, tipo y estado.
- * Los datos propios de cada tipo (distancia, mochila térmica, peso, embalaje,
- * disponibilidad) no forman parte del modelo relacional, por lo que un pedido
- * leído desde la base de datos los recibe con valores neutros.
+ * La tabla almacena dirección, tipo y estado. La distancia y los datos propios de
+ * cada tipo no se almacenan: un pedido leído desde la base de datos los recibe
+ * con valores neutros.
  */
 public class PedidoDAO {
 

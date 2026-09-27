@@ -7,9 +7,8 @@ import java.sql.SQLException;
 /**
  * Punto único de acceso a la base de datos {@code speedfast_db}.
  *
- * Centraliza la URL JDBC y las credenciales para que ninguna otra clase las
- * repita. Cada llamada entrega una conexión nueva, que quien la solicita debe
- * cerrar al terminar su operación.
+ * Centraliza la URL JDBC y las credenciales. Cada llamada a {@link #conectar()}
+ * entrega una conexión nueva, que cierra quien la solicita.
  */
 public final class ConexionBD {
 
