@@ -6,7 +6,7 @@ import java.time.LocalTime;
 /**
  * Entrega de SpeedFast: relaciona un pedido con el repartidor que lo lleva.
  *
- * Corresponde a una fila de la tabla {@code entrega}. Un pedido puede tener
+ * Corresponde a una fila de la tabla {@code entregas}. Un pedido puede tener
  * varias entregas.
  */
 public class Entrega {
@@ -16,6 +16,11 @@ public class Entrega {
     private int idRepartidor;
     private LocalDate fecha;
     private LocalTime hora;
+
+    public Entrega(int id, int idPedido, int idRepartidor, LocalDate fecha, LocalTime hora) {
+        this(idPedido, idRepartidor, fecha, hora);
+        this.id = id;
+    }
 
     public Entrega(int idPedido, int idRepartidor, LocalDate fecha, LocalTime hora) {
         this.idPedido = idPedido;

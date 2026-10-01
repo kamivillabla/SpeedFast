@@ -3,7 +3,7 @@ package cl.speedfast.modelo;
 /**
  * Repartidor registrado en SpeedFast.
  *
- * Corresponde a una fila de la tabla {@code repartidor}.
+ * Corresponde a una fila de la tabla {@code repartidores}.
  */
 public class Repartidor {
 
@@ -43,6 +43,6 @@ public class Repartidor {
      */
     @Override
     public String toString() {
-        return "#" + id + " - " + nombre;
+        return id + " - " + nombre;
     }
 }
