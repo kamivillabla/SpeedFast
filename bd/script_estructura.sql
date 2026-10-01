@@ -2,24 +2,24 @@ CREATE DATABASE IF NOT EXISTS speedfast_db;
 
 USE speedfast_db;
 
-CREATE TABLE repartidor (
+CREATE TABLE repartidores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE pedido (
+CREATE TABLE pedidos (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    direccion VARCHAR(150) NOT NULL,
-    tipo VARCHAR(30) NOT NULL,
-    estado VARCHAR(20) NOT NULL
+    direccion VARCHAR(100) NOT NULL,
+    tipo ENUM('COMIDA','ENCOMIENDA','EXPRESS'),
+    estado ENUM('PENDIENTE','EN_REPARTO','ENTREGADO')
 );
 
-CREATE TABLE entrega (
+CREATE TABLE entregas (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    id_pedido INT NOT NULL,
-    id_repartidor INT NOT NULL,
-    fecha DATE NOT NULL,
-    hora TIME NOT NULL,
-    FOREIGN KEY (id_pedido) REFERENCES pedido (id),
-    FOREIGN KEY (id_repartidor) REFERENCES repartidor (id)
+    id_pedido INT,
+    id_repartidor INT,
+    fecha DATE,
+    hora TIME,
+    FOREIGN KEY (id_pedido) REFERENCES pedidos(id),
+    FOREIGN KEY (id_repartidor) REFERENCES repartidores(id)
 );
