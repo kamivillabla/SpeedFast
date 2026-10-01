@@ -6,7 +6,7 @@ Cada tipo de pedido estima su tiempo de entrega con una fórmula propia y aplica
 
 La jornada de reparto se ejecuta de forma concurrente: los pedidos se depositan en una zona de carga común y varios repartidores los retiran en paralelo, sin que un pedido sea entregado dos veces.
 
-El sistema se opera desde una interfaz gráfica Java Swing que permite registrar pedidos y repartidores, consultar el listado de pedidos y registrar entregas. La información se almacena en una base de datos MySQL, a la que la aplicación accede mediante JDBC.
+El sistema se opera desde una interfaz gráfica Java Swing que permite registrar, editar, eliminar y listar repartidores, pedidos y entregas. La información se almacena en una base de datos MySQL, a la que la aplicación accede mediante JDBC a través de una clase DAO por entidad.
 
 ## Requisitos
 
@@ -37,11 +37,12 @@ SpeedFast/
 │           │   ├── PedidoEncomienda.java
 │           │   ├── PedidoExpress.java
 │           │   ├── EstadoPedido.java
+│           │   ├── TipoPedido.java
 │           │   ├── Repartidor.java
 │           │   ├── Entrega.java
 │           │   └── package-info.java
 │           ├── dao/
-│           │   ├── ConexionBD.java
+│           │   ├── ConexionDB.java
 │           │   ├── PedidoDAO.java
 │           │   ├── RepartidorDAO.java
 │           │   ├── EntregaDAO.java
@@ -57,9 +58,10 @@ SpeedFast/
 │           │   ├── CampoValidado.java
 │           │   ├── Validaciones.java
 │           │   ├── VentanaPrincipal.java
-│           │   ├── VentanaRegistroPedido.java
-│           │   ├── VentanaRegistroRepartidor.java
-│           │   ├── VentanaListaPedidos.java
+│           │   ├── VentanaGestion.java
+│           │   ├── VentanaRepartidores.java
+│           │   ├── VentanaPedidos.java
+│           │   ├── VentanaEntregas.java
 │           │   └── package-info.java
 │           └── main/
 │               ├── Main.java
@@ -95,12 +97,13 @@ SpeedFast/
 | `PedidoEncomienda` | Documentos y paquetes. |
 | `PedidoExpress` | Compras de supermercado o farmacia. |
 | `EstadoPedido` | Estados del pedido dentro del proceso de entrega. |
-| `Repartidor` (`modelo`) | Repartidor registrado. Fila de la tabla `repartidor`. |
-| `Entrega` | Relación entre un pedido y un repartidor, con fecha y hora. Fila de la tabla `entrega`. |
-| `ConexionBD` | URL, credenciales y apertura de conexiones JDBC. |
-| `PedidoDAO` | Inserción y consulta de pedidos. |
-| `RepartidorDAO` | Inserción y consulta de repartidores. |
-| `EntregaDAO` | Inserción de entregas. |
+| `TipoPedido` | Tipos de pedido. Relaciona cada subclase con su valor en la tabla `pedidos`. |
+| `Repartidor` (`modelo`) | Repartidor registrado. Fila de la tabla `repartidores`. |
+| `Entrega` | Relación entre un pedido y un repartidor, con fecha y hora. Fila de la tabla `entregas`. |
+| `ConexionDB` | URL, credenciales y apertura de conexiones JDBC. |
+| `RepartidorDAO` | CRUD de la tabla `repartidores`. |
+| `PedidoDAO` | CRUD de la tabla `pedidos`. |
+| `EntregaDAO` | CRUD de la tabla `entregas`. |
 | `ControladorDeEnvios` | Registro de envíos, despacho, cancelación e historial. |
 | `ZonaDeCarga` | Recurso compartido. Pedidos en espera de repartidor. |
 | `Repartidor` (`concurrencia`) | Tarea concurrente. Retira pedidos de la zona de carga y los entrega. |
@@ -184,6 +187,14 @@ classDiagram
             ENTREGADO
             CANCELADO
         }
+        class TipoPedido {
+            <<enumeration>>
+            COMIDA
+            ENCOMIENDA
+            EXPRESS
+            +crearPedido(String idPedido, String direccion) Pedido
+            +de(Pedido pedido)$ TipoPedido
+        }
         class RepartidorRegistrado["Repartidor"] {
             -int id
             -String nombre
@@ -201,22 +212,29 @@ classDiagram
     }
 
     namespace cl.speedfast.dao {
-        class ConexionBD {
+        class ConexionDB {
             -String URL
             -String USUARIO
             -String CONTRASENA
             +conectar()$ Connection
         }
-        class PedidoDAO {
-            +guardar(Pedido pedido) void
-            +listarTodos() List~Pedido~
-        }
         class RepartidorDAO {
-            +guardar(Repartidor repartidor) void
-            +listarTodos() List~Repartidor~
+            +create(Repartidor repartidor) void
+            +readAll() List~Repartidor~
+            +update(Repartidor repartidor) boolean
+            +delete(int id) boolean
+        }
+        class PedidoDAO {
+            +create(Pedido pedido) void
+            +readAll() List~Pedido~
+            +update(Pedido pedido) boolean
+            +delete(int id) boolean
         }
         class EntregaDAO {
-            +guardar(Entrega entrega) void
+            +create(Entrega entrega) void
+            +readAll() List~Entrega~
+            +update(Entrega entrega) boolean
+            +delete(int id) boolean
         }
     }
 
@@ -266,15 +284,17 @@ classDiagram
     ControladorDeEnvios ..> Despachable : usa
     ControladorDeEnvios ..> Cancelable : usa
 
+    TipoPedido ..> Pedido : crea
     Entrega --> Pedido : idPedido
     Entrega --> RepartidorRegistrado : idRepartidor
 
-    PedidoDAO ..> ConexionBD : usa
-    RepartidorDAO ..> ConexionBD : usa
-    EntregaDAO ..> ConexionBD : usa
-    PedidoDAO ..> Pedido : guarda y lee
-    RepartidorDAO ..> RepartidorRegistrado : guarda y lee
-    EntregaDAO ..> Entrega : guarda
+    PedidoDAO ..> ConexionDB : usa
+    RepartidorDAO ..> ConexionDB : usa
+    EntregaDAO ..> ConexionDB : usa
+    PedidoDAO ..> Pedido : persiste
+    PedidoDAO ..> TipoPedido : usa
+    RepartidorDAO ..> RepartidorRegistrado : persiste
+    EntregaDAO ..> Entrega : persiste
 
     Runnable <|.. Repartidor
     ZonaDeCarga "1" o-- "0..*" Pedido : pedidosEnEspera
@@ -287,8 +307,8 @@ classDiagram
     classDef datos fill:#fce4ec,stroke:#ad1457,color:#560027
 
     cssClass "Despachable,Cancelable,Rastreable" contrato
-    cssClass "Pedido,PedidoComida,PedidoEncomienda,PedidoExpress,EstadoPedido,RepartidorRegistrado,Entrega" modelo
-    cssClass "ConexionBD,PedidoDAO,RepartidorDAO,EntregaDAO" datos
+    cssClass "Pedido,PedidoComida,PedidoEncomienda,PedidoExpress,EstadoPedido,TipoPedido,RepartidorRegistrado,Entrega" modelo
+    cssClass "ConexionDB,PedidoDAO,RepartidorDAO,EntregaDAO" datos
     cssClass "ControladorDeEnvios" gestor
     cssClass "Runnable,ZonaDeCarga,Repartidor" concurrente
 ```
@@ -411,16 +431,18 @@ Base de datos MySQL `speedfast_db`, creada por `bd/script_estructura.sql`.
 
 | Tabla | Columnas | Clave primaria | Claves foráneas |
 |---|---|---|---|
-| `repartidor` | `id`, `nombre` | `id`, `AUTO_INCREMENT` | — |
-| `pedido` | `id`, `direccion`, `tipo`, `estado` | `id`, `AUTO_INCREMENT` | — |
-| `entrega` | `id`, `id_pedido`, `id_repartidor`, `fecha`, `hora` | `id`, `AUTO_INCREMENT` | `id_pedido` → `pedido(id)`, `id_repartidor` → `repartidor(id)` |
+| `repartidores` | `id`, `nombre` | `id`, `AUTO_INCREMENT` | — |
+| `pedidos` | `id`, `direccion`, `tipo`, `estado` | `id`, `AUTO_INCREMENT` | — |
+| `entregas` | `id`, `id_pedido`, `id_repartidor`, `fecha`, `hora` | `id`, `AUTO_INCREMENT` | `id_pedido` → `pedidos(id)`, `id_repartidor` → `repartidores(id)` |
 
-Todas las columnas son `NOT NULL`. Un repartidor puede realizar muchas entregas y un pedido puede tener una o varias; cada entrega corresponde a un pedido y a un repartidor.
+Un repartidor puede realizar muchas entregas y un pedido puede tener una o varias; cada entrega corresponde a un pedido y a un repartidor.
 
-| Columna | Valores |
-|---|---|
-| `pedido.tipo` | `COMIDA`, `ENCOMIENDA`, `EXPRESS` |
-| `pedido.estado` | Nombre del valor de `EstadoPedido` |
+| Columna | Tipo | Valores |
+|---|---|---|
+| `pedidos.tipo` | `ENUM` | `COMIDA`, `ENCOMIENDA`, `EXPRESS` |
+| `pedidos.estado` | `ENUM` | `PENDIENTE`, `EN_REPARTO`, `ENTREGADO` |
+| `entregas.fecha` | `DATE` | |
+| `entregas.hora` | `TIME` | |
 
 La distancia y los datos propios de cada tipo de pedido no se almacenan. Un pedido leído desde la base de datos los recibe con valores neutros.
 
@@ -428,70 +450,94 @@ La distancia y los datos propios de cada tipo de pedido no se almacenan. Un pedi
 
 | Parámetro | Valor |
 |---|---|
-| Clase | `ConexionBD` |
+| Clase | `ConexionDB` |
 | Método | `conectar()`, mediante `DriverManager` |
 | URL | `jdbc:mysql://localhost:3306/speedfast_db` |
 | Usuario | `root` |
-| Contraseña | Constante `CONTRASENA` de `ConexionBD` |
+| Contraseña | Constante `CONTRASENA` de `ConexionDB` |
 
 ### Acceso a datos
 
-| Clase | Método | SQL | Resultado |
-|---|---|---|---|
-| `PedidoDAO` | `guardar(Pedido)` | `INSERT` | Asigna al pedido el ID generado |
-| `PedidoDAO` | `listarTodos()` | `SELECT` | `List<Pedido>` |
-| `RepartidorDAO` | `guardar(Repartidor)` | `INSERT` | Asigna al repartidor el ID generado |
-| `RepartidorDAO` | `listarTodos()` | `SELECT` | `List<Repartidor>` |
-| `EntregaDAO` | `guardar(Entrega)` | `INSERT` | Asigna a la entrega el ID generado |
+`RepartidorDAO`, `PedidoDAO` y `EntregaDAO` exponen las mismas cuatro operaciones sobre su tabla.
 
-Las operaciones usan `PreparedStatement` y cierran conexión, sentencia y `ResultSet` con *try-with-resources*. Ante un error, el DAO relanza la `SQLException` con el nombre de la operación fallida y la ventana la informa al usuario.
+| Método | SQL | Resultado |
+|---|---|---|
+| `create(objeto)` | `INSERT` | Asigna al objeto el ID generado |
+| `readAll()` | `SELECT` | Lista de objetos ordenada por ID |
+| `update(objeto)` | `UPDATE ... WHERE id = ?` | `true` si el registro existía |
+| `delete(id)` | `DELETE ... WHERE id = ?` | `true` si el registro existía |
+
+Las operaciones usan `PreparedStatement` y cierran conexión, sentencia y `ResultSet` con *try-with-resources*. Ante un error, el DAO relanza la `SQLException` con el nombre de la operación fallida y la ventana la informa con `JOptionPane`. Eliminar un repartidor o un pedido que tiene entregas registradas se rechaza con un mensaje que lo indica.
 
 ## Interfaz gráfica
 
-| Ventana | Rol |
+| Clase | Rol |
 |---|---|
-| `VentanaPrincipal` | Accesos a las operaciones del sistema |
-| `VentanaRegistroPedido` | Alta de pedidos |
-| `VentanaRegistroRepartidor` | Alta de repartidores |
-| `VentanaListaPedidos` | Listado de pedidos y registro de entregas |
+| `VentanaPrincipal` | Accesos a la gestión de cada entidad |
+| `VentanaGestion` | Clase abstracta. Formulario, tabla y flujo común del CRUD |
+| `VentanaRepartidores` | CRUD de repartidores |
+| `VentanaPedidos` | CRUD de pedidos |
+| `VentanaEntregas` | CRUD de entregas |
 | `CampoValidado` | Campo de formulario con validación mientras se escribe |
 | `Validaciones` | Reglas de validación combinables |
 
 ### VentanaPrincipal
 
-| Acción | Destino | Pedidos que presenta | Operaciones |
-|---|---|---|---|
-| Registrar pedido | `VentanaRegistroPedido` | | Alta de pedidos |
-| Registrar repartidor | `VentanaRegistroRepartidor` | | Alta de repartidores |
-| Listar pedidos | `VentanaListaPedidos` | Todos | Solo consulta |
-| Registrar entrega | `VentanaListaPedidos` | Pendientes o asignados | Registro de entrega |
+Abre `VentanaRepartidores`, `VentanaPedidos` y `VentanaEntregas`. Cada ventana se crea una vez, se reutiliza en las aperturas siguientes y recarga sus datos al mostrarse. Registrar, editar o eliminar un repartidor o un pedido recarga la ventana de entregas.
 
-Cada ventana se crea una vez y se reutiliza en las aperturas siguientes.
+### VentanaGestion
 
-### VentanaRegistroPedido
+Organiza cada ventana en formulario, `JTable` y botones. La primera columna de la tabla es el ID; las celdas no son editables y la tabla se ordena al pulsar un encabezado.
 
-Solicita dirección, distancia y tipo de pedido, más los campos propios del tipo, que se muestran mediante un `CardLayout`. El identificador lo genera la base de datos y se informa en el mensaje de confirmación.
-
-| Tipo | Campos propios |
+| Acción | Comportamiento |
 |---|---|
-| Comida | Requiere mochila térmica |
-| Encomienda | Peso en kilos y embalaje |
-| Express | Disponibilidad inmediata |
+| Selección de fila | Carga el registro en el formulario |
+| Registrar | Valida el formulario y llama a `create` |
+| Editar | Exige una fila seleccionada, valida el formulario y llama a `update` con el ID de la fila |
+| Eliminar | Exige una fila seleccionada, pide confirmación y llama a `delete` |
+| Limpiar | Quita la selección y vacía el formulario |
 
-| Dato | Condiciones |
+Tras una operación exitosa la tabla se recarga con `readAll()`, el formulario se limpia y un mensaje informa el resultado.
+
+### VentanaRepartidores
+
+| Campo | Componente | Condiciones |
+|---|---|---|
+| Nombre | `JTextField` | Obligatorio · entre 3 y 100 caracteres · debe incluir letras |
+
+### VentanaPedidos
+
+| Campo | Componente | Condiciones |
+|---|---|---|
+| Dirección | `JTextField` | Obligatoria · entre 5 y 100 caracteres · debe incluir letras |
+| Tipo | `JComboBox<TipoPedido>` | `COMIDA`, `ENCOMIENDA`, `EXPRESS` |
+| Estado | `JComboBox<EstadoPedido>` | `PENDIENTE`, `EN_REPARTO`, `ENTREGADO` |
+
+| Columna | Columna SQL |
 |---|---|
-| Dirección de entrega | Obligatoria · entre 5 y 120 caracteres · debe incluir letras |
-| Distancia | Obligatoria · número finito entre 0,1 y 100 |
-| Peso | Obligatorio · número finito entre 0,1 y 100 |
-| Embalaje | Obligatorio · entre 3 y 50 caracteres · debe incluir letras |
+| ID | `pedidos.id` |
+| Dirección | `pedidos.direccion` |
+| Tipo | `pedidos.tipo` |
+| Estado | `pedidos.estado` |
 
-Los campos numéricos admiten coma o punto decimal. Un peso superior a `PedidoEncomienda.PESO_MAXIMO_KG` muestra un aviso en ámbar sin impedir el registro.
+### VentanaEntregas
 
-*Guardar* valida los campos exigibles, enfoca el primero pendiente y, con datos válidos, guarda el pedido en estado `PENDIENTE` mediante `PedidoDAO.guardar(Pedido)`.
+| Campo | Componente | Condiciones |
+|---|---|---|
+| Pedido | `JComboBox<Pedido>` | Obligatorio · cargado con `PedidoDAO.readAll()` |
+| Repartidor | `JComboBox<Repartidor>` | Obligatorio · cargado con `RepartidorDAO.readAll()` |
+| Fecha | `JTextField` | Obligatoria · fecha válida `dd-mm-aaaa` |
+| Hora | `JTextField` | Obligatoria · hora válida `hh:mm` |
 
-### VentanaRegistroRepartidor
+Los combos muestran `id - dirección` e `id - nombre` y guardan el objeto completo, del que se obtiene el ID que se almacena en `entregas`. Se recargan junto con la tabla y conservan la opción elegida si sigue existiendo. El formulario limpio propone la fecha y hora actuales.
 
-Solicita el nombre del repartidor y lo guarda mediante `RepartidorDAO.guardar(Repartidor)`. El nombre es obligatorio, tiene entre 3 y 100 caracteres y debe incluir letras.
+| Columna | Contenido |
+|---|---|
+| ID | `entregas.id` |
+| Pedido | `id - dirección` del pedido |
+| Repartidor | `id - nombre` del repartidor |
+| Fecha | `entregas.fecha` |
+| Hora | `entregas.hora` |
 
 ### Validaciones
 
@@ -500,7 +546,8 @@ Solicita el nombre del repartidor y lo guarda mediante `RepartidorDAO.guardar(Re
 | `obligatorio(mensaje)` | El campo tiene contenido |
 | `longitudEntre(min, max)` | La extensión está dentro del rango |
 | `contieneLetras(mensaje)` | El texto incluye al menos una letra |
-| `numeroEntre(concepto, min, max)` | Es un número finito dentro del rango |
+| `fecha()` | Fecha existente con formato `dd-mm-aaaa` |
+| `hora()` | Hora entre 00:00 y 23:59 con formato `hh:mm` |
 
 `Validaciones.todas(...)` combina reglas y devuelve el primer motivo de rechazo. Salvo `obligatorio`, las reglas aceptan el campo vacío.
 
@@ -510,45 +557,23 @@ Agrupa etiqueta, cuadro de texto y mensaje. Un `DocumentListener` aplica la regl
 
 | Situación | Comportamiento |
 |---|---|
-| Formulario recién abierto o limpiado | Sin advertencias |
+| Formulario recién abierto, limpiado o cargado desde la tabla | Sin advertencias |
 | Valor inaceptable | Borde rojo y motivo bajo el campo |
-| Valor aceptable con aviso | Borde y mensaje en ámbar |
 | Valor corregido | Se retiran el borde y el mensaje |
-| Cambio de tipo de pedido | Los campos que dejan de ser exigibles descartan su advertencia |
-
-### VentanaListaPedidos
-
-`JTable` con `DefaultTableModel` de celdas no editables, cargado desde `PedidoDAO.listarTodos()`.
-
-| Columna | Columna SQL |
-|---|---|
-| ID | `pedido.id` |
-| Tipo | `pedido.tipo` |
-| Dirección | `pedido.direccion` |
-| Estado | `pedido.estado` |
-
-| Alcance | Pedidos | Acciones |
-|---|---|---|
-| `mostrarTodos()` | Todos | Ninguna |
-| `mostrarPorGestionar()` | `PENDIENTE` o `ASIGNADO` | Registrar entrega |
-
-La tabla se recarga al abrirse, al pulsar *Actualizar* y al registrar un pedido, y conserva la selección por ID.
-
-*Registrar entrega* presenta en un `JComboBox` los repartidores obtenidos con `RepartidorDAO.listarTodos()` y guarda la entrega del pedido seleccionado con `EntregaDAO.guardar(Entrega)`, con la fecha y hora actuales.
 
 ## Diseño
 
 | Aspecto | Resolución |
 |---|---|
-| Reutilización | `Pedido` concentra lo común; las subclases definen fórmula de tiempo, criterio de asignación y requisitos. Ambas sobrecargas de `asignarRepartidor` confirman en `confirmarAsignacion(String)`. |
-| Escalabilidad | Un tipo de pedido nuevo hereda de `Pedido` e implementa `calcularTiempoEntrega()`; su persistencia requiere agregar su código de tipo en `PedidoDAO`. Cada interfaz declara un solo método. |
+| Reutilización | `Pedido` concentra lo común; las subclases definen fórmula de tiempo, criterio de asignación y requisitos. Ambas sobrecargas de `asignarRepartidor` confirman en `confirmarAsignacion(String)`. `VentanaGestion` concentra el flujo CRUD de las tres ventanas, que solo definen su formulario y sus llamadas al DAO. |
+| Escalabilidad | Un tipo de pedido nuevo hereda de `Pedido` e implementa `calcularTiempoEntrega()`; su persistencia requiere agregarlo a `TipoPedido` y a la columna `pedidos.tipo`. Cada interfaz declara un solo método. |
 | Acceso al recurso compartido | `retirarPedido()` es `synchronized` completo: la comprobación y el retiro son indivisibles. |
 | Estados | El enum `EstadoPedido` concentra las transiciones válidas en `despachar()` y `cancelar()`. |
-| Separación de responsabilidades | Reglas de negocio en el modelo, acceso a datos en los DAO, coordinación en el gestor, concurrencia en `ZonaDeCarga` y `Repartidor`, e interacción con el usuario en la vista. Las ventanas no contienen SQL. |
+| Separación de responsabilidades | Reglas de negocio en el modelo, acceso a datos en los DAO, coordinación en el gestor, concurrencia en `ZonaDeCarga` y `Repartidor`, e interacción con el usuario en la vista. El SQL reside solo en los DAO. |
 
 ## Ejecución
 
-La base de datos se crea con `bd/script_estructura.sql` y la contraseña del usuario `root` se define en `ConexionBD`. `Main` abre `VentanaPrincipal` en el hilo de despacho de eventos de Swing.
+La base de datos se crea con `bd/script_estructura.sql` y la contraseña del usuario `root` se define en `ConexionDB`. `Main` abre `VentanaPrincipal` en el hilo de despacho de eventos de Swing.
 
 ```bash
 javac -encoding UTF-8 -cp lib/mysql-connector-j-9.3.0.jar -d out/production/SpeedFast src/cl/speedfast/interfaces/*.java src/cl/speedfast/modelo/*.java src/cl/speedfast/dao/*.java src/cl/speedfast/gestores/*.java src/cl/speedfast/concurrencia/*.java src/cl/speedfast/vista/*.java src/cl/speedfast/main/*.java
@@ -562,24 +587,28 @@ java -cp "out/production/SpeedFast;lib/mysql-connector-j-9.3.0.jar" cl.speedfast
 
 | Escenario | Acción | Resultado esperado |
 |---|---|---|
-| Registro de pedido | Guardar un pedido válido de cada tipo | Confirmación con el ID generado; fila en `pedido` con estado `PENDIENTE` |
-| Listado | Abrir *Listar pedidos* | La tabla muestra las filas de `pedido` |
-| Persistencia | Cerrar y volver a abrir la aplicación | El listado conserva los pedidos |
-| Registro de repartidor | Guardar un repartidor válido | Confirmación con el ID generado; fila en `repartidor` |
-| Registro de entrega | Registrar la entrega de un pedido seleccionado | Fila en `entrega` con pedido, repartidor, fecha y hora |
-| Entrega sin repartidores | Registrar una entrega con la tabla `repartidor` vacía | Aviso de que no hay repartidores registrados |
-| Entrega sin selección | Registrar una entrega sin fila seleccionada | Aviso de selección requerida |
-| Integridad referencial | Insertar una entrega con un pedido o repartidor inexistente | Rechazo por clave foránea |
-| Credenciales incorrectas | Conectar con una contraseña errónea | Error de acceso denegado |
-| Servidor no disponible | Operar con MySQL detenido | Error de conexión; el formulario conserva sus datos |
-| Formulario incompleto | Guardar con campos vacíos | Campos exigibles marcados y foco en el primero |
-| Dato no numérico | Escribir texto en distancia o peso | Campo marcado en rojo |
-| Cantidad fuera de rango | Escribir cero, un negativo o un valor sobre el máximo | Campo marcado en rojo con el rango admitido |
-| Dirección sin calle | Escribir solo números en la dirección | Campo marcado en rojo |
-| Encomienda con sobrepeso | Escribir un peso mayor a 20 kg | Aviso en ámbar; el registro se permite |
-| Cambio de tipo | Alternar el tipo de pedido | Se muestran los campos del tipo elegido |
-| Nombre de repartidor inválido | Guardar un nombre vacío o solo numérico | Campo marcado en rojo |
-| Modo de consulta | Abrir *Listar pedidos* | Sin botón de registro de entrega |
+| Registro de repartidor | Registrar un nombre válido | Mensaje con el ID generado; fila en `repartidores` y en la tabla |
+| Edición de repartidor | Seleccionar un repartidor, cambiar el nombre y editar | Mismo ID con el nombre nuevo en la base de datos y en la tabla |
+| Eliminación de repartidor | Seleccionar un repartidor sin entregas, eliminar y confirmar | La fila desaparece de `repartidores` y de la tabla |
+| Registro de pedido | Registrar dirección, tipo y estado válidos | Mensaje con el ID generado; fila en `pedidos` |
+| Edición de pedido | Seleccionar un pedido y cambiar su estado | Mismo ID con el estado nuevo |
+| Eliminación de pedido | Seleccionar un pedido sin entregas, eliminar y confirmar | La fila desaparece de `pedidos` |
+| Registro de entrega | Elegir pedido y repartidor, con fecha y hora válidas | Fila en `entregas` con los ID elegidos |
+| Edición de entrega | Seleccionar una entrega y cambiar repartidor u hora | Mismo ID con los datos nuevos |
+| Eliminación de entrega | Seleccionar una entrega, eliminar y confirmar | La fila desaparece de `entregas` |
+| Persistencia | Cerrar y volver a abrir la aplicación | Las tablas conservan los registros |
+| Refresco de combos | Registrar un repartidor o pedido con la ventana de entregas abierta | El combo correspondiente lo incluye |
+| Integridad referencial | Eliminar un repartidor o pedido con entregas | Mensaje de que tiene entregas registradas; el registro se conserva |
+| Cancelar eliminación | Responder *No* a la confirmación | No se elimina el registro |
+| Sin selección | Editar o eliminar sin fila seleccionada | Aviso de selección requerida |
+| Entrega sin datos relacionados | Registrar una entrega sin pedidos o repartidores registrados | Aviso de que primero se deben registrar |
+| Campo obligatorio vacío | Registrar con nombre, dirección, fecha u hora vacíos | Campo marcado en rojo y foco en él |
+| Texto sin letras | Escribir solo números en el nombre o la dirección | Campo marcado en rojo |
+| Largo fuera de rango | Escribir menos o más caracteres que los admitidos | Campo marcado en rojo con el rango admitido |
+| Fecha inválida | Escribir `31-02-2026` o `2026-10-01` | Campo marcado en rojo con el formato esperado |
+| Hora inválida | Escribir `24:00` o `9:5` | Campo marcado en rojo con el formato esperado |
+| Credenciales incorrectas | Conectar con una contraseña errónea | Mensaje de error de acceso denegado |
+| Servidor no disponible | Operar con MySQL detenido | Mensaje de error de conexión; el formulario conserva sus datos |
 
 ## Autora
 
