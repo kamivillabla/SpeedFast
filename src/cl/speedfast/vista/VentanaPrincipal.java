@@ -12,24 +12,25 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
-import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Ventana de entrada del sistema de pedidos de SpeedFast.
  *
- * Reúne las operaciones disponibles y abre la ventana que corresponde a cada
- * una.
+ * Abre la gestión de repartidores, pedidos y entregas. Cuando cambian los
+ * repartidores o los pedidos, recarga la ventana de entregas para que sus combos
+ * reflejen la base de datos.
  */
 public class VentanaPrincipal extends JFrame {
 
     private static final int ANCHO_PX = 420;
-    private static final int ALTO_PX = 330;
+    private static final int ALTO_PX = 290;
     private static final int MARGEN_PX = 20;
     private static final int SEPARACION_PX = 10;
 
-    private VentanaListaPedidos ventanaListaPedidos;
-    private VentanaRegistroPedido ventanaRegistroPedido;
-    private VentanaRegistroRepartidor ventanaRegistroRepartidor;
+    private VentanaRepartidores ventanaRepartidores;
+    private VentanaPedidos ventanaPedidos;
+    private VentanaEntregas ventanaEntregas;
 
     /**
      * Construye la ventana principal.
@@ -64,14 +65,12 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private JPanel crearPanelDeAcciones() {
-        JPanel acciones = new JPanel(new GridLayout(4, 1, SEPARACION_PX, SEPARACION_PX));
+        JPanel acciones = new JPanel(new GridLayout(3, 1, SEPARACION_PX, SEPARACION_PX));
         acciones.setBorder(BorderFactory.createEmptyBorder(SEPARACION_PX, MARGEN_PX, MARGEN_PX, MARGEN_PX));
 
-        acciones.add(crearBoton("Registrar pedido", e -> mostrarRegistroPedido()));
-        acciones.add(crearBoton("Registrar repartidor", e -> mostrarRegistroRepartidor()));
-        acciones.add(crearBoton("Listar pedidos", e -> mostrarPedidos(VentanaListaPedidos::mostrarTodos)));
-        acciones.add(crearBoton("Registrar entrega",
-                e -> mostrarPedidos(VentanaListaPedidos::mostrarPorGestionar)));
+        acciones.add(crearBoton("Repartidores", e -> mostrar(this::obtenerVentanaRepartidores)));
+        acciones.add(crearBoton("Pedidos", e -> mostrar(this::obtenerVentanaPedidos)));
+        acciones.add(crearBoton("Entregas", e -> mostrar(this::obtenerVentanaEntregas)));
 
         return acciones;
     }
@@ -85,48 +84,59 @@ public class VentanaPrincipal extends JFrame {
     }
 
     /**
-     * Muestra el formulario de registro, reutilizando la ventana si ya está abierta.
-     */
-    private void mostrarRegistroPedido() {
-        if (ventanaRegistroPedido == null) {
-            ventanaRegistroPedido = new VentanaRegistroPedido(this::refrescarListaPedidos);
-        }
-
-        ventanaRegistroPedido.setVisible(true);
-        ventanaRegistroPedido.toFront();
-    }
-
-    /**
-     * Muestra el formulario de repartidores, reutilizando la ventana si ya está abierta.
-     */
-    private void mostrarRegistroRepartidor() {
-        if (ventanaRegistroRepartidor == null) {
-            ventanaRegistroRepartidor = new VentanaRegistroRepartidor();
-        }
-
-        ventanaRegistroRepartidor.setVisible(true);
-        ventanaRegistroRepartidor.toFront();
-    }
-
-    /**
-     * Muestra el listado de pedidos con el alcance indicado, reutilizando la
-     * ventana si ya está abierta.
+     * Muestra la ventana indicada con los datos actuales de la base de datos.
      *
-     * @param alcance selección de pedidos que debe mostrar la ventana
+     * @param ventana proveedor de la ventana que se desea mostrar
      */
-    private void mostrarPedidos(Consumer<VentanaListaPedidos> alcance) {
-        if (ventanaListaPedidos == null) {
-            ventanaListaPedidos = new VentanaListaPedidos();
-        }
+    private void mostrar(Supplier<? extends VentanaGestion> ventana) {
+        VentanaGestion destino = ventana.get();
 
-        alcance.accept(ventanaListaPedidos);
-        ventanaListaPedidos.setVisible(true);
-        ventanaListaPedidos.toFront();
+        destino.refrescar();
+        destino.setVisible(true);
+        destino.toFront();
     }
 
-    private void refrescarListaPedidos() {
-        if (ventanaListaPedidos != null) {
-            ventanaListaPedidos.refrescar();
+    /**
+     * Crea la ventana de repartidores en su primera apertura y la reutiliza en
+     * las siguientes.
+     */
+    private VentanaRepartidores obtenerVentanaRepartidores() {
+        if (ventanaRepartidores == null) {
+            ventanaRepartidores = new VentanaRepartidores();
+            ventanaRepartidores.setAlModificarDatos(this::refrescarEntregas);
+        }
+
+        return ventanaRepartidores;
+    }
+
+    /**
+     * Crea la ventana de pedidos en su primera apertura y la reutiliza en las
+     * siguientes.
+     */
+    private VentanaPedidos obtenerVentanaPedidos() {
+        if (ventanaPedidos == null) {
+            ventanaPedidos = new VentanaPedidos();
+            ventanaPedidos.setAlModificarDatos(this::refrescarEntregas);
+        }
+
+        return ventanaPedidos;
+    }
+
+    /**
+     * Crea la ventana de entregas en su primera apertura y la reutiliza en las
+     * siguientes.
+     */
+    private VentanaEntregas obtenerVentanaEntregas() {
+        if (ventanaEntregas == null) {
+            ventanaEntregas = new VentanaEntregas();
+        }
+
+        return ventanaEntregas;
+    }
+
+    private void refrescarEntregas() {
+        if (ventanaEntregas != null) {
+            ventanaEntregas.refrescar();
         }
     }
 }
