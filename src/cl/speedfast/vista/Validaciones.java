@@ -1,6 +1,10 @@
 package cl.speedfast.vista;
 
-import java.util.Locale;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -13,7 +17,10 @@ import java.util.regex.Pattern;
 final class Validaciones {
 
     private static final Pattern CONTIENE_LETRA = Pattern.compile(".*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ].*");
-    private static final Locale LOCALE_CHILE = Locale.of("es", "CL");
+    private static final DateTimeFormatter FORMATO_FECHA =
+            DateTimeFormatter.ofPattern("dd-MM-uuuu").withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter FORMATO_HORA =
+            DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
 
     private Validaciones() {
     }
@@ -83,36 +90,20 @@ final class Validaciones {
     }
 
     /**
-     * Exige un número dentro del rango indicado.
+     * Exige una fecha válida con el formato {@code dd-mm-aaaa}.
      *
-     * Admite coma o punto como separador decimal y rechaza los valores no
-     * finitos.
-     *
-     * @param concepto nombre del dato, usado para redactar el motivo del rechazo
-     * @param minimo   valor mínimo aceptado
-     * @param maximo   valor máximo aceptado
      * @return la regla correspondiente
      */
-    static Function<String, String> numeroEntre(String concepto, double minimo, double maximo) {
+    static Function<String, String> fecha() {
         return texto -> {
             if (texto.isEmpty()) {
                 return null;
             }
 
-            double valor;
-
             try {
-                valor = comoNumero(texto);
-            } catch (NumberFormatException e) {
-                return concepto + " debe ser un numero. Ejemplo: 4,5";
-            }
-
-            if (!Double.isFinite(valor)) {
-                return concepto + " debe ser un numero. Ejemplo: 4,5";
-            }
-
-            if (valor < minimo || valor > maximo) {
-                return concepto + " debe estar entre " + formatear(minimo) + " y " + formatear(maximo) + ".";
+                comoFecha(texto);
+            } catch (DateTimeParseException e) {
+                return "Fecha no valida. Formato: dd-mm-aaaa";
             }
 
             return null;
@@ -120,27 +111,65 @@ final class Validaciones {
     }
 
     /**
-     * Interpreta un texto como número decimal, admitiendo coma como separador.
+     * Exige una hora válida con el formato {@code hh:mm}, de 00:00 a 23:59.
      *
-     * @param texto contenido a interpretar
-     * @return el valor numérico representado
-     * @throws NumberFormatException si el texto no representa un número
+     * @return la regla correspondiente
      */
-    static double comoNumero(String texto) {
-        return Double.parseDouble(texto.replace(',', '.'));
+    static Function<String, String> hora() {
+        return texto -> {
+            if (texto.isEmpty()) {
+                return null;
+            }
+
+            try {
+                comoHora(texto);
+            } catch (DateTimeParseException e) {
+                return "Hora no valida. Formato: hh:mm";
+            }
+
+            return null;
+        };
     }
 
     /**
-     * Escribe un número como se muestra al usuario, sin decimales sobrantes.
+     * Interpreta un texto con el formato {@code dd-mm-aaaa} como fecha.
      *
-     * @param valor número a escribir
-     * @return el número con coma decimal, o sin decimales si no los necesita
+     * @param texto contenido a interpretar
+     * @return la fecha representada
+     * @throws DateTimeParseException si el texto no representa una fecha válida
      */
-    private static String formatear(double valor) {
-        if (valor == Math.rint(valor)) {
-            return String.valueOf((long) valor);
-        }
+    static LocalDate comoFecha(String texto) {
+        return LocalDate.parse(texto, FORMATO_FECHA);
+    }
 
-        return String.format(LOCALE_CHILE, "%.1f", valor);
+    /**
+     * Interpreta un texto con el formato {@code hh:mm} como hora.
+     *
+     * @param texto contenido a interpretar
+     * @return la hora representada
+     * @throws DateTimeParseException si el texto no representa una hora válida
+     */
+    static LocalTime comoHora(String texto) {
+        return LocalTime.parse(texto, FORMATO_HORA);
+    }
+
+    /**
+     * Escribe una fecha con el formato que aceptan los formularios.
+     *
+     * @param fecha fecha a escribir
+     * @return la fecha como {@code dd-mm-aaaa}
+     */
+    static String formatear(LocalDate fecha) {
+        return FORMATO_FECHA.format(fecha);
+    }
+
+    /**
+     * Escribe una hora con el formato que aceptan los formularios.
+     *
+     * @param hora hora a escribir
+     * @return la hora como {@code hh:mm}
+     */
+    static String formatear(LocalTime hora) {
+        return FORMATO_HORA.format(hora);
     }
 }

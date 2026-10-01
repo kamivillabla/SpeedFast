@@ -28,7 +28,6 @@ import java.util.function.Function;
 class CampoValidado {
 
     private static final Color COLOR_ERROR = new Color(178, 34, 34);
-    private static final Color COLOR_AVISO = new Color(176, 108, 0);
     private static final float TAMANO_MENSAJE_PT = 11f;
     private static final int ANCHO_ETIQUETA_PX = 150;
     private static final int SEPARACION_MENSAJE_PX = 2;
@@ -47,7 +46,6 @@ class CampoValidado {
     private final Function<String, String> regla;
     private final Border bordeOriginal;
 
-    private Function<String, String> aviso = texto -> null;
     private boolean validacionSuspendida;
 
     /**
@@ -98,18 +96,6 @@ class CampoValidado {
     }
 
     /**
-     * Añade una advertencia que informa sin impedir el registro.
-     *
-     * Se muestra en ámbar y no invalida el campo.
-     *
-     * @param aviso regla que recibe el contenido del campo y devuelve el texto a
-     *              mostrar, o null si no hay nada que advertir
-     */
-    void definirAviso(Function<String, String> aviso) {
-        this.aviso = aviso;
-    }
-
-    /**
      * Entrega la fila lista para incorporarse al formulario.
      *
      * @return el panel que agrupa etiqueta, cuadro de texto y mensaje de error
@@ -128,6 +114,19 @@ class CampoValidado {
     }
 
     /**
+     * Reemplaza el contenido del campo sin mostrar advertencias.
+     *
+     * @param texto contenido que se carga en el campo
+     */
+    void setTexto(String texto) {
+        validacionSuspendida = true;
+        campo.setText(texto);
+        validacionSuspendida = false;
+
+        descartarAdvertencia();
+    }
+
+    /**
      * Comprueba el contenido del campo y muestra el resultado.
      *
      * @return true si el valor cumple la regla de validación
@@ -136,17 +135,11 @@ class CampoValidado {
         String error = regla.apply(getTexto());
 
         if (error != null) {
-            destacar(error, COLOR_ERROR);
+            destacar(error);
             return false;
         }
 
-        String advertencia = aviso.apply(getTexto());
-
-        if (advertencia != null) {
-            destacar(advertencia, COLOR_AVISO);
-        } else {
-            descartarAdvertencia();
-        }
+        descartarAdvertencia();
 
         return true;
     }
@@ -155,20 +148,13 @@ class CampoValidado {
      * Devuelve el campo a su estado inicial: sin contenido y sin advertencias.
      */
     void limpiar() {
-        validacionSuspendida = true;
-        campo.setText("");
-        validacionSuspendida = false;
-
-        descartarAdvertencia();
+        setTexto("");
     }
 
     /**
      * Retira la advertencia visible sin alterar el contenido del campo.
-     *
-     * Se aplica a los campos que dejan de ser exigibles al cambiar el tipo de
-     * pedido.
      */
-    void descartarAdvertencia() {
+    private void descartarAdvertencia() {
         mensajeError.setText(SIN_MENSAJE);
         campo.setBorder(bordeOriginal);
     }
@@ -181,10 +167,10 @@ class CampoValidado {
         campo.selectAll();
     }
 
-    private void destacar(String texto, Color color) {
+    private void destacar(String texto) {
         mensajeError.setText(texto);
-        mensajeError.setForeground(color);
-        campo.setBorder(BorderFactory.createLineBorder(color));
+        mensajeError.setForeground(COLOR_ERROR);
+        campo.setBorder(BorderFactory.createLineBorder(COLOR_ERROR));
     }
 
     private void validarCambio() {
