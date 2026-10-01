@@ -10,13 +10,13 @@ import java.sql.SQLException;
  * Centraliza la URL JDBC y las credenciales. Cada llamada a {@link #conectar()}
  * entrega una conexión nueva, que cierra quien la solicita.
  */
-public final class ConexionBD {
+public final class ConexionDB {
 
     private static final String URL = "jdbc:mysql://localhost:3306/speedfast_db";
     private static final String USUARIO = "root";
     private static final String CONTRASENA = "tu_contrasena";
 
-    private ConexionBD() {
+    private ConexionDB() {
     }
 
     /**
